@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fluid Simulation in Pyodide</title>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.27.5/full/pyodide.js"></script>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script> 
+
+
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f9f9f9;
+      text-align: center;
+    }
+    img, .plotly-graph-div {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    function isBrowserCompatible() {
+      const supportsWasm = (() => {
+        try {
+          if (typeof WebAssembly === "object" &&
+              typeof WebAssembly.instantiate === "function") {
+            const module = new WebAssembly.Module(
+              Uint8Array.of(0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00)
+            );
+            if (module instanceof WebAssembly.Module)
+              return new WebAssembly.Instance(module) instanceof WebAssembly.Instance;
+          }
+        } catch (e) {}
+        return false;
+      })();
+  
+      const isTooOld = !('fetch' in window && 'TextEncoder' in window && supportsWasm);
+      return !isTooOld;
+    }
+  
+    if (!isBrowserCompatible()) {
+      document.body.innerHTML = `
+        <div style="padding: 2em; font-family: sans-serif; text-align: center; background: #fffbe6; color: #333;">
+          <h2>⚠️ Your browser is not supported</h2>
+          <p>This simulation requires a modern browser with WebAssembly support (e.g. Chrome, Firefox, Edge, Safari).</p>
+          <p>Please try opening this page on a more up-to-date device or browser.</p>
+        </div>
+      `;
+    }
+  </script>
+
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 20px;">
+    <h2>Interactive Simulation of Electrocaloric Cooler (or Heat-Pump)</h2>
+    <!--<img src="https://www.coolpol.eu/fileadmin/_processed_/4/c/csm_COOLPOL_logo_large_transp_6887a41419.png" -->
+    <!--<img src="/csm_COOLPOL_logo_large_transp_6887a41419.png" -->
+    <img src="coolpol_regen_sketch_crop.jpg"
+         alt="COOLPOL Logo"
+         width="250"
+         style="border: none;" />
+  </div>
+
+
+  <!-- Container for all plot blocks -->
+  <div id="plot-container" style="display: flex; flex-direction: column; align-items: center; margin-top: 20px;">
+    
+    <!-- Heatmap -->
+    <div id="heatmap-plot" style="width: 800px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
+    <img id="mpl-canvas" width="800" height="200" style="display: none;" />
+      
+    <!-- Time-domain plots -->
+    <div id="graph-plot" style="width: 800px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
+    <div id="power-plot" style="width: 800px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
+    <div id="energy-plot" style="width: 800px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
+  </div>
+
+  <!-- Control Panel -->
+  <h3>Simulation parameters</h3>
+  <div id="control-panel" style="margin-top: 1px; text-align: center; font-family: sans-serif; padding: 10px;">
+    <label><input type="checkbox" id="toggle-mode" /> Automatic mode</label><br />
+    <label><input type="checkbox" id="toggle-invert" /> Invert phase (cooling/heating)</label><br />
+    <label>Cycle time (s): <input id="slider-cycle" type="range" min="1" max="8" step="0.1" value="3.0" />
+      <span id="label-cycle">4.0</span>s</label><br />
+    <label>Pump delay (%): <input id="slider-delay" type="range" min="0" max="50" step="5" value="0" />
+      <span id="label-delay">0</span>%</label><br />
+    <label><input type="checkbox" id="toggle-labels" /> Hide text annotation in simulation</label><br />
+    <label><input type="checkbox" id="toggle-pause" /> Pause simulation</label>
+  </div>
+
+  <div style="text-align:center; margin: 10px;">
+    <label><input type="checkbox" id="toggle-remote" /> Show RT Box interface (feature only available offline)</label>
+  </div>
+
+<div id="remote-settings" style="display: none;">
+
+  <fieldset style="margin: 10px auto; max-width: 600px; border: 1px solid #ccc; padding: 10px;">
+    <legend><b>🎮 Remote Control Settings</b></legend>
+    <table style="width:100%; border-spacing: 8px;">
+      <tr>
+        <td style="vertical-align: top;">Electric field (<i>e_field</i>):</td>
+        <td>
+          <input type="range" id="param-e_field" min="0" max="1" step="0.01" value="0.5"
+            style="writing-mode: vertical-lr; height: 120px;">
+        </td>
+      </tr>
+      <tr>
+        <td>Fluid position (<i>fluid_position</i>):</td>
+        <td>
+          <input type="range" id="param-fluid_position" min="-1" max="1" step="0.01" value="0" style="width: 100%;">
+        </td>
+      </tr>
+    </table>
+  
+  <label><input type="checkbox" id="toggle-isSliders" />Use slider inputs</label>
+
+  <!--<div style="text-align:center; margin: 10px;">
+    <button onclick="startRemoteControl()">Start remote control</button>
+  </div>-->
+  
+  <input type="checkbox" id="toggle-pollRTBox"> Poll RT Box and override slider values<br>
+
+  </fieldset>
+</div>
+
+  <div style="text-align:center; margin: 10px;">
+    <label><input type="checkbox" id="toggle-advanced" /> Show advanced settings</label>
+  </div>
+
+   
+<!-- Advanced Settings (initially hidden) -->
+<div id="advanced-settings" style="display: none;">
+  <fieldset style="margin: 10px auto; max-width: 600px; border: 1px solid #ccc; padding: 10px;">
+    <legend><b>🔷 Geometry</b></legend>
+    <table style="width:100%; border-spacing: 8px;">
+      <tr>
+        <td>Grid size x-direction:</td>
+        <td><input type="number" id="param-nx" value="360" min="1"></td>
+      </tr>
+      <tr>
+        <td>Grid size y-direction:</td>
+        <td><input type="number" id="param-ny" value="28" min="1"></td>
+      </tr>
+      <tr>
+        <td>Number of plates:</td>
+        <td><input type="number" id="param-numplates" value="5" min="1"></td>
+      </tr>
+      <tr>
+        <td>Plate height:</td>
+        <td><input type="number" id="param-plateheight" value="2" min="1"></td>
+      </tr>
+      <tr>
+        <td>Plate spacing:</td>
+        <td><input type="number" id="param-platespacing" value="4" min="0"></td>
+      </tr>
+    </table>
+  </fieldset>
+  
+  <fieldset style="margin: 10px auto; max-width: 600px; border: 1px solid #ccc; padding: 10px;">
+    <legend><b>🧪 Material</b></legend>
+    <table style="width:100%; border-spacing: 8px;">
+      <tr>
+        <td>Viscosity (μ):</td>
+        <td><input type="number" id="param-mu" value="0.05" step="0.001"></td>
+      </tr>
+      <tr>
+        <td>Heat capacity (fluid):</td>
+        <td><input type="number" id="param-cpfluid" value="1.0" step="0.1"></td>
+      </tr>
+      <tr>
+        <td>Heat capacity (solid):</td>
+        <td><input type="number" id="param-cpsolid" value="1.0" step="0.1"></td>
+      </tr>
+      <tr>
+        <td>Thermal conductivity (fluid):</td>
+        <td><input type="number" id="param-kfluid" value="0.5" step="0.1"></td>
+      </tr>
+      <tr>
+        <td>Thermal conductivity (solid):</td>
+        <td><input type="number" id="param-ksolid" value="0.5" step="0.1"></td>
+      </tr>
+         <td>Electrocaloric adiabatic ΔT<sub>ad</sub>:</td>
+        <td><input type="number" id="param-dtad" value="2.0" step="0.1"></td>
+      </tr>
+    </table>
+  </fieldset>
+
+  <fieldset style="margin: 10px auto; max-width: 600px; border: 1px solid #ccc; padding: 10px;">
+    <legend><b>🛠️ Others</b></legend>
+    <table style="width:100%; border-spacing: 8px;">
+
+    <tr>
+      <td>Diffusion steps:</td>
+      <td><input type="number" id="param-ndiff" value="50" min="0"></td>
+    </tr>
+    <tr>
+      <td>Convection steps (pumping speed):</td>
+      <td><input type="number" id="param-nconv" value="50" min="0"></td>
+    </tr>
+    <tr>
+    </table>
+  </fieldset>
+  <div style="text-align:center; margin: 10px;">
+    <button onclick="applyParams()">Apply parameters and restart</button>
+  </div>
+  <div style="text-align:center; margin: 10px;">
+    <label><input type="checkbox" id="toggle-power-plot" checked /> Show Power Plot</label><br>
+    <label><input type="checkbox" id="toggle-energy-plot" checked /> Show Energy Plot</label>
+  </div>
+</div>
+  
+  
+<h3>Instructions</h3>
+  <!-- Instructions Section -->
+  <div id="instructions" style="margin-top: 0px; max-width: 800px; margin-left: auto; margin-right: auto; font-size: 14px; line-height: 1.5; color: #333; text-align: left;">
+
+    <ul style="text-align: left; display: inline-block;">
+      <li>
+        <strong>Manual mode (default):</strong> Use your keyboard:
+        <ul>
+          <li><kbd>Space (pressed)</kbd> to charge the electrocaloric element, resulting in an instantaneous temperature increase.</li>
+          <li><kbd>Space (released)</kbd> to discharge the electrocaloric element, resulting in an instantaneous temperature decrease.</li>
+          <li><kbd>Left ←</kbd> / <kbd>Right →</kbd> to move the fluid left/right.</li>
+        </ul>
+      </li>
+  
+      <li>
+        <strong>Automatic mode:</strong> Use the sliders above to configure the simulation:
+        <ul>
+          <li><strong>Cycle time</strong>: Duration of a full heating/cooling cycle.</li>
+          <li><strong>Pump delay</strong>: Shift between heating and cooling phases (max: 50%, more is covered by "invert phase").</li>
+          <li><strong>Invert phase</strong>: Swap heating and cooling actions.</li>
+        </ul>
+      </li>
+  
+      <li>
+        <strong>Both modes:</strong>
+        <ul>
+          <li>Select between <strong>Automatic</strong> and <strong>Manual</strong> using the checkbox.</li>
+          <li>Press <kbd>r</kbd> to reset all tempeartures to zero.</li>
+          <li>Left mouse click and drag on the simulation to add electrocaloric elements (remove fluid elements).</li>
+          <li>Right mouse click and drag on the simulation to add fluid (remove electrocaloric elements).</li>
+          <li><i>Note:</i> On Mouse release, the updated velocity field is calculated, which takes some time, and is then shown.</li>
+
+              
+        </ul>
+      </li>
+    </ul>
+  </div>
+   
+  <div>
+  <p>© 2025 Stefan Mönch – v1.4b – CC BY-NC 4.0</p>
+  </div>
+
+  <!-- JS Logic -->
+  <script>
+    // Prevent spacebar from scrolling the page
+    window.addEventListener("keydown", function(event) {
+      if (event.key === " " || event.code === "Space") {
+        event.preventDefault();
+      }
+      if (["ArrowLeft", "ArrowRight", " ", "r"].includes(event.key)) {
+        event.preventDefault();
+      }
+    }, { passive: false }); // passive: false is important for preventDefault() to work on some browsers
+  </script>
+
+  <script>
+    const autoToggle = document.getElementById("toggle-mode");
+    const invertToggle = document.getElementById("toggle-invert");
+    const cycleSlider = document.getElementById("slider-cycle");
+    const delaySlider = document.getElementById("slider-delay");
+    const cycleLabel = document.getElementById("label-cycle");
+    const delayLabel = document.getElementById("label-delay");
+    const labelsToggle = document.getElementById("toggle-labels");
+    const pauseToggle = document.getElementById("toggle-pause");
+    const isSlidersToggle = document.getElementById("toggle-isSliders");
+
+    autoToggle.disabled = true;
+
+    function updateControlState() {
+      const isAutomatic = autoToggle.checked;
+      invertToggle.disabled = !isAutomatic;
+      cycleSlider.disabled = !isAutomatic;
+      delaySlider.disabled = !isAutomatic;
+    }
+
+    cycleSlider.addEventListener("input", () => {
+      cycleLabel.textContent = parseFloat(cycleSlider.value).toFixed(1);
+    });
+
+    delaySlider.addEventListener("input", () => {
+      delayLabel.textContent = delaySlider.value;
+    });
+
+    autoToggle.addEventListener("change", updateControlState);
+    updateControlState();
+  </script>
+
+  <!-- Loading Message in Stream Canvas -->
+  <script>
+    // Find the div element where the message should be displayed
+    const divElement = document.getElementById("heatmap-plot");
+  
+    // Set the inner HTML of the div to display the loading message
+    divElement.innerHTML = "<p style='text-align:center; font-size:20px; font-family:sans-serif;'>Simulation is loading, please wait...</p>Space (keyboard): pressed/released = +dTad / -dTad temperature change<br>Left/right (keyboard): fluid puming<br><br>Your challenge: Maximize the temperature span!<br><br>Detailed instructions below...";
+  </script>
+
+  <!-- Pyodide startup -->
+  <script type="module">
+    async function main() {
+  
+      document.getElementById("toggle-mode").checked = false;
+      document.getElementById("slider-cycle").value = 3.0;
+      document.getElementById("label-cycle").textContent = "3.0";
+      document.getElementById("slider-delay").value = 0;
+      document.getElementById("label-delay").textContent = "0";
+      document.getElementById("toggle-invert").checked = false;
+      document.getElementById("toggle-pause").checked = false;
+      document.getElementById("toggle-labels").checked = false;
+      document.getElementById("toggle-advanced").checked = false;
+      document.getElementById("toggle-remote").checked = false;
+      document.getElementById("toggle-remote").checked = false;
+      document.getElementById("toggle-isSliders").checked = false;
+
+        
+
+      // ✅ Initialize checkboxes and visibility explicitly
+      document.getElementById("toggle-power-plot").checked = false
+      document.getElementById("toggle-energy-plot").checked = false
+      //document.getElementById("power-plot").style.display = "block";
+      //document.getElementById("energy-plot").style.display = "block";
+
+    // Hide the corresponding plots
+    document.getElementById("power-plot").style.display = "none";
+    document.getElementById("energy-plot").style.display = "none";
+
+      updateControlState();
+
+
+
+
+
+      //const pyodide = await loadPyodide();
+      const pyodide = await loadPyodide({ // locally
+      //indexURL: "pyodide-0.27.5/"
+        indexURL: "https://cdn.jsdelivr.net/pyodide/v0.27.5/full/"
+      });
+      console.log("✅ Pyodide loaded:", pyodide.runPython("import sys; sys.version"));
+      //await pyodide.loadPackage(["numpy", "matplotlib", "scipy", "micropip"]);
+      await pyodide.loadPackage(["numpy", "matplotlib", "scipy"]);
+
+      // Install wgpy from PyPI
+      //await pyodide.runPythonAsync(`
+      //    import micropip
+      //    await micropip.install("wgpy")
+      //`);
+
+      //console.log(await pyodide.loadedPackages);
+      console.table(await pyodide.loadedPackages);
+
+      const code = await fetch("main.py?nocache=" + Date.now()).then(res => res.text());
+      await pyodide.runPythonAsync(code);
+
+
+
+      autoToggle.disabled = false;
+
+      setInterval(() => {
+        pyodide.runPython("update_frame()");
+      }, 50);
+ 
+ 
+      window.applyParams = function () {
+        pyodide.runPython("restart_simulation_from_html()");
+      };
+
+      //window.startRemoteControl = function () {
+      // pyodide.runPython("startRemoteControl_from_html()");
+      //};
+  }
+
+    main();
+  </script>
+
+<script>
+  document.getElementById("toggle-advanced").addEventListener("change", function () {
+    const section = document.getElementById("advanced-settings");
+    section.style.display = this.checked ? "block" : "none";
+  });
+</script>
+
+<script>
+  document.getElementById("toggle-remote").addEventListener("change", function () {
+    const section = document.getElementById("remote-settings");
+    section.style.display = this.checked ? "block" : "none";
+  });
+</script>
+
+ 
+
+
+<script type="module">
+  let rtBoxPollTimer = null;
+
+  // Clamp helper
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  async function pollHardware() {
+    try {
+      //const response = await fetch("http://localhost:5000/poll_data");
+      const response = await fetch("http://127.0.0.1:5000/poll_data");
+      const data = await response.json();
+
+      console.log(data)
+
+      // Clamp and update Electric Field (0 to 1)
+      if (data.efield_slider !== undefined) {
+        const clampedE = clamp(1-data.efield_slider, 0, 1);
+        document.getElementById("param-e_field").value = clampedE;
+      }
+
+      // Clamp and update Fluid Position (-1 to 1)
+      if (data.fluid_position_slider !== undefined) {
+        const clampedF = clamp(-((data.fluid_position_slider)*2-1), -1, 1);
+        document.getElementById("param-fluid_position").value = clampedF;
+      }
+
+    } catch (err) {
+      console.error("Polling error:", err);
+    }
+  }
+
+  // Handle checkbox to start/stop polling
+  document.getElementById("toggle-pollRTBox").addEventListener("change", (event) => {
+    if (event.target.checked) {
+      console.log("Polling started (RT Box override ON)");
+      rtBoxPollTimer = setInterval(pollHardware, 50);
+    } else {
+      console.log("Polling stopped (RT Box override OFF)");
+      clearInterval(rtBoxPollTimer);
+      rtBoxPollTimer = null;
+    }
+  });
+</script>
+
+<script>
+  document.getElementById("toggle-power-plot").addEventListener("change", function () {
+    document.getElementById("power-plot").style.display = this.checked ? "block" : "none";
+  });
+
+  document.getElementById("toggle-energy-plot").addEventListener("change", function () {
+    document.getElementById("energy-plot").style.display = this.checked ? "block" : "none";
+  });
+</script>
+
+</body>
+</html>
