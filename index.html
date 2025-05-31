@@ -385,7 +385,13 @@
         pyodide.runPython("update_frame()");
       }, 50);
  
- 
+   // Automatically enable automatic mode after 3 seconds
+setTimeout(() => {
+  document.getElementById("toggle-mode").checked = true;
+  updateControlState();  // update the sliders' enabled state
+  pyodide.runPython(`automatic_mode = True`);
+}, 3000);
+      
       window.applyParams = function () {
         pyodide.runPython("restart_simulation_from_html()");
       };
