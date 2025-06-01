@@ -532,7 +532,7 @@ def update_heatmap():
         'x': [int((xlim_min + xlim_max) / 2)],
         'y': [4],
         #'text': ["<b>electrocaloric material</b> (<i>PVDF polymer</i> or <i>PST ceramic</i>)"],
-        'text': ["<b>electrocaloric polymer</b>"],
+        'text': ["<b>electrocaloric material</b>"],
         #'text': ['<span style="background-color:rgba(255,255,255,0.7); padding:2px;"><b>electrocaloric material</b> (<i>PVDF polymer</i> or <i>PST ceramic</i>)</span>'],
         'mode': 'text',
         'textposition': 'middle center',
