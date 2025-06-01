@@ -23,8 +23,8 @@ default_config = {
     "mu": 0.05, "rho": 1.0,
     
     # Material
-    "c_p_fluid": 1.0, "c_p_solid": 0.2,
-    "k_fluid": 0.5, "k_solid": 0.5,
+    "c_p_fluid": 1.0, "c_p_solid": 1.0,
+    "k_fluid": 0.5, "k_solid": 0.1,
     "n_diff": 50, "n_conv": 50,
     "dTad": 2.0,
 
