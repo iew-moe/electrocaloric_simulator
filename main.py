@@ -383,7 +383,7 @@ def compute_heat_flow(x, u_mod, v_mod):
 
     # Diffusive heat flow: -k * ∂T/∂x * dy
     dT_dx = (T[:, x+1] - T[:, x-1]) / (2 * dx) * n_diffusion_steps
-    k_map = np.where(fluid_mask[:, x], k_fluid_x, k_solid_x)
+    k_map = np.where(piston_mask[:, x], 0.0, np.where(fluid_mask[:, x], k_fluid_x, k_solid_x))
     Q_diff = -np.sum(k_map[valid_y] * dT_dx[valid_y] * dy)
 
     return Q_conv, Q_diff
@@ -865,9 +865,13 @@ def update_frame_noProfile():
         ratio_conv = count_conv / n_convection_step if n_convection_step > 0 else float('inf')
 
         if ratio_diff <= ratio_conv:
+            kx_map = np.where(piston_mask[1:-1,1:-1], 0.0,
+                              np.where(fluid_mask[1:-1,1:-1], k_fluid_x, k_solid_x))
+            ky_map = np.where(piston_mask[1:-1,1:-1], 0.0,
+                              np.where(fluid_mask[1:-1,1:-1], k_fluid_y, k_solid_y))
             T_new[1:-1, 1:-1] += dt / cp_map * (
-                np.where(fluid_mask[1:-1,1:-1], k_fluid_x, k_solid_x) * (T_new[1:-1,2:] - 2*T_new[1:-1,1:-1] + T_new[1:-1,:-2]) / dx**2 +
-                np.where(fluid_mask[1:-1,1:-1], k_fluid_y, k_solid_y) * (T_new[2:,1:-1] - 2*T_new[1:-1,1:-1] + T_new[:-2,1:-1]) / dy**2
+                kx_map * (T_new[1:-1,2:] - 2*T_new[1:-1,1:-1] + T_new[1:-1,:-2]) / dx**2 +
+                ky_map * (T_new[2:,1:-1] - 2*T_new[1:-1,1:-1] + T_new[:-2,1:-1]) / dy**2
             )
             count_diff += 1
         else:
@@ -1013,6 +1017,7 @@ def init_simulation(config=default_config):
     global zmin, zmax
     global isSliders, fluid_position_ist, isRemoteControlled, efield_ist, efield_soll
     global last_frame_time
+    global piston_mask
 
     # Timekeeping
     import time
@@ -1115,6 +1120,12 @@ def init_simulation(config=default_config):
     x_outlet_idx = nx - margin + 15
     xlim_min = x_inlet_idx - 15
     xlim_max = x_outlet_idx + 15
+
+    # Define piston region
+    piston_start = x_inlet_idx // 2
+    piston_end = nx - (nx - x_outlet_idx) // 2 
+    piston_mask = np.zeros((ny, nx), dtype=bool)
+    piston_mask[:, piston_start:piston_end] = True
 
     Y, X = np.mgrid[0:ny, 0:nx]
 
