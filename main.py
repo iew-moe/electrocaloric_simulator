@@ -1,4 +1,4 @@
-copyright_version = "© 2025 Stefan Mönch – v1.4b – CC BY-NC 4.0"
+copyright_version = "© Stefan Mönch, v1.5, CC BY-NC 4.0"
 
 import numpy as np
 import matplotlib
@@ -61,18 +61,35 @@ def pressure_poisson(p, u, v):
         p = apply_pressure_boundary_conditions(p)
     return p
 
+ 
+
+def calc_directional_block_mask(flowDir):
+    # direction: +1 for right, -1 for left 
+    if flowDir == +1:
+        # Rightward flow: block left valves (-1)
+        return (obstacle == 1) | (valve_mask == -1) | (iso_mask == 1)
+    elif flowDir == -1:
+        # Leftward flow: block right valves (+1)
+        return (obstacle == 1) | (valve_mask == 1) | (iso_mask == 1)
+    else:
+        # Default: no valve blocking
+        return (obstacle == 1)
 
 # === Flow Solver ===
-def solve_flow(u, v, p, steps=320, skipSolve=False):
-    global stream, stream_base64
+def solve_flow(u_in, v_in, p_in, skipSolve, flowDir):
+ 
+
+    directional_block_mask = calc_directional_block_mask(flowDir)
+
+    steps = 320
 
     if not skipSolve:
-        u = np.zeros((ny, nx))
-        v = np.zeros((ny, nx))
-        p = np.zeros((ny, nx))
+        u_in = np.zeros((ny, nx))
+        v_in = np.zeros((ny, nx))
+        p_in = np.zeros((ny, nx))
 
         for _ in range(steps):
-            un, vn = u.copy(), v.copy()
+            un, vn = u_in.copy(), v_in.copy()
             u_star = un.copy()
             v_star = vn.copy()
 
@@ -84,26 +101,26 @@ def solve_flow(u, v, p, steps=320, skipSolve=False):
                 (vn[1:-1,2:] - 2*vn[1:-1,1:-1] + vn[1:-1,:-2]) / dx**2 +
                 (vn[2:,1:-1] - 2*vn[1:-1,1:-1] + vn[:-2,1:-1]) / dy**2)
 
-            u_star[~fluid_mask] = 0
-            v_star[~fluid_mask] = 0
-            p = pressure_poisson(p, u_star, v_star)
+            u_star[directional_block_mask] = 0
+            v_star[directional_block_mask] = 0
+            p_in = pressure_poisson(p_in, u_star, v_star)
 
-            u[1:-1,1:-1] = u_star[1:-1,1:-1] - dt * (p[1:-1,2:] - p[1:-1,:-2]) / (2*dx*rho)
-            v[1:-1,1:-1] = v_star[1:-1,1:-1] - dt * (p[2:,1:-1] - p[:-2,1:-1]) / (2*dy*rho)
+            u_in[1:-1,1:-1] = u_star[1:-1,1:-1] - dt * (p_in[1:-1,2:] - p_in[1:-1,:-2]) / (2*dx*rho)
+            v_in[1:-1,1:-1] = v_star[1:-1,1:-1] - dt * (p_in[2:,1:-1] - p_in[:-2,1:-1]) / (2*dy*rho)
 
-            u[:, 0] = 1.0
-            u[:, -1] = 1.0
-            v[0, :] = 0
-            v[-1, :] = 0
+            u_in[:, 0] = flowDir
+            u_in[:, -1] = flowDir
+            v_in[0, :] = 0
+            v_in[-1, :] = 0
 
-            u[~fluid_mask] = 0
-            v[~fluid_mask] = 0
+            u_in[directional_block_mask] = 0
+            v_in[directional_block_mask] = 0
 
-            wall_mask = binary_dilation(~fluid_mask) & fluid_mask
-            u[wall_mask] = 0
-            v[wall_mask] = 0
+            wall_mask = binary_dilation(directional_block_mask) & (~directional_block_mask)
+            u_in[wall_mask] = 0
+            v_in[wall_mask] = 0
     
-        # Precompute streamlines after flow field update
+    # Precompute streamlines after flow field update
     try:
         if 'stream' in globals():
             stream.lines.remove()
@@ -119,18 +136,45 @@ def solve_flow(u, v, p, steps=320, skipSolve=False):
     ax_tmp.set_ylim(0, ny)
     #ax_tmp.invert_yaxis()
 
-    stream = ax_tmp.streamplot(X, Y, u, v, color='white', linewidth=0.1,
-                                start_points=np.array([[0, y] for y in range(0, ny-1, 2)]),
-                                integration_direction='forward', density=2, broken_streamlines=False, arrowsize=0);
+    if flowDir == 1:
+        #start_points = np.array([[3, y] for y in range(5, ny-5, 2)]) #ok
+        start_points = [[3,ny//2]]
+        u_vals = np.array([abs(u_in[y, 3]) for _, y in start_points])
+#         start_points = np.array([[piston_end, y] for y in range((ny//2)-3+7+3, ny-3, 1)])
+#         #start_points = np.array([[x_inlet_idx, y] for y in range(0, ny//2, 2)])         # override
+    else:
+        start_points = np.array([[nx-4, y] for y in range(5, ny-4, 2)]) #ok
+        start_points = [[nx-4,ny//2-1]]
+        u_vals = np.array([abs(u_in[y, nx-4]) for _, y in start_points])
+#         start_points = np.array([[piston_start, y] for y in range(3, (ny//2)+3-7-2, 1)])
+#         #start_points = np.array([[x_outlet_idx, y] for y in range(ny//2, ny-1, 2)])         # override
+    
+
+    # select start points
+    mid_x = nx // 2
+    #start_points = np.array([[mid_x, y] for y in range(ny) if obstacle[y, mid_x] == 0]) 
+    # Evaluate abs(u_in) at each start point
+    #u_vals = np.array([abs(u_in[y, mid_x]) for _, y in start_points])
+    # Find max abs value among these points
+    max_u = np.max(u_vals)
+    # Use only those with abs(u_in) >= 10% of max
+    threshold = 0.1 * max_u
+    #filtered_start_points = np.array([pt for pt, uval in zip(start_points, u_vals) if uval >= threshold])
+    #start_points = filtered_start_points
+    #start_points = filtered_start_points[::2]
+
+    stream = ax_tmp.streamplot(X, Y, u_in, v_in, color='white', linewidth=0.1,
+                                start_points=start_points,
+                                integration_direction='forward', density=2, broken_streamlines=False, arrowsize=0)
  
     # individual linewidth?? (slow...)
     is_indivStreamWidth = False
-    global streamline_plotly
+    
     streamline_plotly = []
     if is_indivStreamWidth:
 
         # Compute velocity magnitude across the whole field
-        speed = np.sqrt(u**2 + v**2)
+        speed = np.sqrt(u_in**2 + v_in**2)
 
         # Global min and max for consistent mapping
         #vmin, vmax = np.min(speed), np.max(speed)
@@ -192,8 +236,9 @@ def solve_flow(u, v, p, steps=320, skipSolve=False):
             y_vals = verts[:, 1]
 
             # Crop to visible region
-            mask = (x_vals >= xlim_min) & (x_vals <= xlim_max -1)
+            mask = (x_vals >= xlim_min + 2) & (x_vals <= xlim_max -2)
             x_crop = x_vals[mask]
+            mask = (y_vals >= 2) & (y_vals <= ny -2)
             y_crop = y_vals[mask]
 
             if len(x_crop) < 2:
@@ -203,13 +248,13 @@ def solve_flow(u, v, p, steps=320, skipSolve=False):
                 'x': x_crop.tolist(),
                 'y': y_crop.tolist(),
                 'mode': 'lines',
-                'line': {'color': 'white', 'width': 0.3},
+                'line': {'color': 'white', 'width': 0.2},
                 'type': 'scatter',
                 'hoverinfo': 'skip',
                 'showlegend': False
             })
 
-    return u, v, p
+    return u_in, v_in, p_in, streamline_plotly
 
 
 
@@ -275,8 +320,10 @@ def on_mouse_move(event):
 
 def on_mouse_up(event):
     if is_mouse_in_heatmap(event):
-        global mouse_is_down, u, v, p
-        u, v, p = solve_flow(u, v, p)
+        global mouse_is_down, u, v, p, u2, v2, p2, streamline_plotly, streamline_plotly2
+            
+        u[:], v[:], p[:], streamline_plotly = solve_flow(u, v, p, False, 1)
+        u2[:], v2[:], p2[:], streamline_plotly2 = solve_flow(u2, v2, p2, False, -1)
 
 
 
@@ -328,8 +375,10 @@ def on_toggle_labels(event):
         console.log("🙈 Labels hidden in simulation.")
     # Trigger redraw of the streamplot
 
-    global u, v, p
-    u, v, p = solve_flow(u, v, p, skipSolve=True)   
+    global u, v, p, u2, v2, p2, streamline_plotly, streamline_plotly2
+
+    u[:], v[:], p[:], streamline_plotly = solve_flow(u, v, p, True, 1)
+    u2[:], v2[:], p2[:], streamline_plotly2 = solve_flow(u2, v2, p2, True, -1)
 
 def on_toggle_pause(event):
     global is_paused 
@@ -383,7 +432,7 @@ def compute_heat_flow(x, u_mod, v_mod):
 
     # Diffusive heat flow: -k * ∂T/∂x * dy
     dT_dx = (T[:, x+1] - T[:, x-1]) / (2 * dx) * n_diffusion_steps
-    k_map = np.where(fluid_mask[:, x], k_fluid_x, k_solid_x)
+    k_map = np.where(piston_mask[:, x], 0.0, np.where(fluid_mask[:, x], k_fluid_x, k_solid_x))
     Q_diff = -np.sum(k_map[valid_y] * dT_dx[valid_y] * dy)
 
     return Q_conv, Q_diff
@@ -427,8 +476,11 @@ def update_heatmap():
     y_vals = list(range(ny))
 
     # Contour (drawn first, underneath)
+    # Combine obstacle and valve regions, then cast to float for contour plotting
+    #obstacle_to_plot = (obstacle[:, xlim_min:xlim_max].astype(bool) | (valve_mask[:, xlim_min:xlim_max] != 0)).astype(float)
     contour_trace = {
         'z': obstacle[:, xlim_min:xlim_max].tolist(),
+        #'z': obstacle_to_plot.tolist(),
         'x': x_vals,
         'y': y_vals,
         'type': 'contour',
@@ -442,6 +494,74 @@ def update_heatmap():
         'line': {
             'width': 2,
             'color': 'black'
+        },
+        'reversescale': True,
+        'showscale': False,
+        'hoverinfo': 'skip'
+    }
+
+    contour_valve1_to_plot = ((valve_mask[:, xlim_min:xlim_max] > 0)).astype(float)
+    contour_valve1_trace = {
+        #'z': obstacle[:, xlim_min:xlim_max].tolist(),
+        'z': contour_valve1_to_plot.tolist(),
+        'x': x_vals,
+        'y': y_vals,
+        'type': 'contour',
+        'colorscale': [[0, 'rgba(0,0,0,0)'], [1, 'purple']],  # Transparent → black
+        'contours': {
+            'start': 0.5,
+            'end': 0.5,
+            'size': 0.5,
+            'coloring': 'lines'
+        },
+        'line': {
+            'width': 2,
+            'color': 'purple'
+        },
+        'reversescale': True,
+        'showscale': False,
+        'hoverinfo': 'skip'
+    }
+    contour_valve2_to_plot = (((-valve_mask[:, xlim_min:xlim_max]) > 0)).astype(float)
+    contour_valve2_trace = {
+        #'z': obstacle[:, xlim_min:xlim_max].tolist(),
+        'z': contour_valve2_to_plot.tolist(),
+        'x': x_vals,
+        'y': y_vals,
+        'type': 'contour',
+        'colorscale': [[0, 'rgba(0,0,0,0)'], [1, 'cyan']],  # Transparent → black
+        'contours': {
+            'start': 0.5,
+            'end': 0.5,
+            'size': 0.5,
+            'coloring': 'lines'
+        },
+        'line': {
+            'width': 2,
+            'color': 'cyan'
+        },
+        'reversescale': True,
+        'showscale': False,
+        'hoverinfo': 'skip'
+    }
+
+    contour_iso_to_plot = (((iso_mask[:, xlim_min:xlim_max]) > 0)).astype(float)
+    contour_iso_trace = {
+        #'z': obstacle[:, xlim_min:xlim_max].tolist(),
+        'z': contour_iso_to_plot.tolist(),
+        'x': x_vals,
+        'y': y_vals,
+        'type': 'contour',
+        'colorscale': [[0, 'rgba(0,0,0,0)'], [1, 'white']],  # Transparent → black
+        'contours': {
+            'start': 0.5,
+            'end': 0.5,
+            'size': 0.5,
+            'coloring': 'lines'
+        },
+        'line': {
+            'width': 2,
+            'color': 'white'
         },
         'reversescale': True,
         'showscale': False,
@@ -540,11 +660,12 @@ def update_heatmap():
         'showlegend': False,
         'cliponaxis': False
     }
-
+ 
     trace3 = {
         'type': 'scatter',
-        'x': [xlim_min + 8],  # Adjust for the correct placement
-        'y': [int(ny / 2)],
+        #'x': [xlim_min + 22],  # Adjust for the correct placement
+        'x': [(piston_end + x_valve1)//2],  # Adjust for the correct placement
+        'y': [int(3 * ny / 4)],
         'text': ["<b>cool-side<br><i>T</i><sub>C</sub>-<i>T</i><sub>0</sub></b>"],
         'mode': 'text',
         'textposition': 'middle center',
@@ -556,8 +677,9 @@ def update_heatmap():
 
     trace4 = {
         'type': 'scatter',
-        'x': [xlim_max - 8],  # Adjust for the correct placement
-        'y': [int(ny / 2)],
+        #'x': [xlim_max - 22],  # Adjust for the correct placement
+        'x': [(x_valve2+piston_start)//2],
+        'y': [int(3* ny / 4)],
         'text': ["<b>hot-side<br><i>T</i><sub>H</sub>-<i>T</i><sub>0</sub></b>"],
         'mode': 'text',
         'textposition': 'middle center',
@@ -597,12 +719,12 @@ def update_heatmap():
         'hoverinfo': 'skip'
     }
 
-
+    
     if show_labels:
-        dat = [heatmap_trace] + streamline_plotly + [contour_trace, trace1, trace2, trace3, trace4, trace5, trace6]
+        dat = [heatmap_trace] + (streamline_plotly if current_direction >= 0 else streamline_plotly2) + [contour_trace, contour_iso_trace, contour_valve1_trace, contour_valve2_trace, trace1, trace2, trace3, trace4, trace5, trace6]
     #    dat = [heatmap_trace] +  [contour_trace, trace1, trace2, trace3, trace4, trace5, trace6]
     else:
-        dat = [heatmap_trace] + streamline_plotly + [contour_trace, trace5]
+        dat = [heatmap_trace] + (streamline_plotly if current_direction >= 0 else streamline_plotly2) + [contour_trace, contour_iso_trace, contour_valve1_trace, contour_valve2_trace, trace5]
 
         
     Plotly.react(
@@ -781,7 +903,7 @@ def update_frame():
         update_frame_noProfile()
 
 def update_frame_noProfile():
-    global T, u, v, p, cf, step_counter, space_previous, first_space_press, stream, fluid_position_ist, isRemoteControlled, efield_soll, efield_ist, last_frame_time
+    global T, u, v, p, u2, v2, p2, cf, step_counter, space_previous, first_space_press, stream, fluid_position_ist, isRemoteControlled, efield_soll, efield_ist, last_frame_time, valve_mask, current_direction
 
     clk_heat, clk_flow = get_automatic_clocks()
 
@@ -798,8 +920,11 @@ def update_frame_noProfile():
     # Flow direction (automatic mode)
     if clk_flow == 1:
         u_mod, v_mod = u, v
+        current_direction = 1
     elif clk_flow == 0:
-        u_mod, v_mod = -u, -v
+        #u_mod, v_mod = -u, -v
+        u_mod, v_mod = u2, v2
+        current_direction = -1
     else:
         if isSliders:
             # remote mode overriden by sliders  
@@ -807,19 +932,26 @@ def update_frame_noProfile():
             if fluid_position_slider > fluid_position_ist + 0.05: # more right
                 fluid_position_ist += 0.1
                 u_mod, v_mod = u, v
+                current_direction = 1
             elif  fluid_position_slider < fluid_position_ist - 0.05: #more left
                 fluid_position_ist -= 0.1
-                u_mod, v_mod = -u, -v
+                #u_mod, v_mod = -u, -v
+                u_mod, v_mod = u2, v2
+                current_direction = -1
             else:
                 u_mod, v_mod = np.zeros_like(u), np.zeros_like(v)
         else:
             # manual mode
             if key_states["ArrowRight"]:
                 u_mod, v_mod = u, v
+                current_direction = 1
             elif key_states["ArrowLeft"]:
-                u_mod, v_mod = -u, -v
+                #u_mod, v_mod = -u, -v
+                u_mod, v_mod = u2, v2 
+                current_direction = -1
             else:
                 u_mod, v_mod = np.zeros_like(u), np.zeros_like(v)
+                current_direction = 0
 
     u_mod = u_mod * u_mod_mult
     v_mod = v_mod * v_mod_mult
@@ -853,6 +985,9 @@ def update_frame_noProfile():
     #space_previous = space_current
 
     if heat_adjustment != 0.0:
+        if first_space_press:
+            heat_adjustment *= 0.5   # check if it still works with RTBox
+            first_space_press = False
         console.log(f"🌡️ Heat {'injected' if heat_adjustment > 0 else 'removed'}: {heat_adjustment:+.1f} K")
         T[~fluid_mask] += heat_adjustment
 
@@ -865,9 +1000,13 @@ def update_frame_noProfile():
         ratio_conv = count_conv / n_convection_step if n_convection_step > 0 else float('inf')
 
         if ratio_diff <= ratio_conv:
+            kx_map = np.where(piston_mask[1:-1,1:-1], 0.0,
+                              np.where(fluid_mask[1:-1,1:-1], k_fluid_x, k_solid_x))
+            ky_map = np.where(piston_mask[1:-1,1:-1], 0.0,
+                              np.where(fluid_mask[1:-1,1:-1], k_fluid_y, k_solid_y))
             T_new[1:-1, 1:-1] += dt / cp_map * (
-                np.where(fluid_mask[1:-1,1:-1], k_fluid_x, k_solid_x) * (T_new[1:-1,2:] - 2*T_new[1:-1,1:-1] + T_new[1:-1,:-2]) / dx**2 +
-                np.where(fluid_mask[1:-1,1:-1], k_fluid_y, k_solid_y) * (T_new[2:,1:-1] - 2*T_new[1:-1,1:-1] + T_new[:-2,1:-1]) / dy**2
+                kx_map * (T_new[1:-1,2:] - 2*T_new[1:-1,1:-1] + T_new[1:-1,:-2]) / dx**2 +
+                ky_map * (T_new[2:,1:-1] - 2*T_new[1:-1,1:-1] + T_new[:-2,1:-1]) / dy**2
             )
             count_diff += 1
         else:
@@ -895,7 +1034,8 @@ def update_frame_noProfile():
             coll.remove()
         except ValueError:
             pass
-    obstacle_contour = ax.contour(obstacle, levels=[0.5], colors='black', linewidths=1.0)
+    obstacle_contour = ax.contour(((obstacle.astype(bool) | (valve_mask != 0)).astype(float)), levels=[0.25], colors='black', linewidths=1.0)
+    #obstacle_contour = ax.contour((((valve_mask != 0)).astype(float)), levels=[0.25], colors='black', linewidths=1.0)
 
     #buf = io.BytesIO()
     #fig.savefig(buf, format="png", pad_inches=0)
@@ -917,7 +1057,7 @@ def update_frame_noProfile():
     Tspan = outlet_temp - inlet_temp
     Q_conv_in, Q_diff_in = compute_heat_flow(x_inlet_idx, u_mod, v_mod)
     Q_total_in = Q_conv_in + Q_diff_in
-    Q_conv_in = 1.23
+    #Q_conv_in = 1.23 ## has to be fixed 
 
     current_time = time.time()
     frame_duration = current_time - last_frame_time
@@ -1006,13 +1146,20 @@ def init_simulation(config=default_config):
     global x_inlet_idx, x_outlet_idx, xlim_min, xlim_max
     global margin, plate_height, plate_spacing, num_plates
     global start_y, Y, X, fig, ax, cf, obstacle_contour
-    global streamline_plotly
+    global streamline_plotly, streamline_plotly2
     global inlet_history, outlet_history, qc_history, qc_integral
     global step_counter, show_labels, key_states
     global space_previous, first_space_press
     global zmin, zmax
     global isSliders, fluid_position_ist, isRemoteControlled, efield_ist, efield_soll
     global last_frame_time
+    global piston_mask, piston_start, piston_end
+    global iso_mask
+    global valve_mask, x_valve1, x_valve2
+    global u2,v2,p2 # for left low (if valves are used, to calculate two velocity fields)
+    global current_direction
+
+    current_direction = 0 # for selection of which streamline_plot to show
 
     # Timekeeping
     import time
@@ -1064,8 +1211,11 @@ def init_simulation(config=default_config):
     # Arrays
     T = np.zeros((ny, nx))
     u = np.zeros((ny, nx))
+    u2 = np.zeros((ny, nx))  
     v = np.zeros((ny, nx))
-    p = np.zeros((ny, nx))
+    v2 = np.zeros((ny, nx))
+    p  = np.zeros((ny, nx))
+    p2 = np.zeros((ny, nx))
     obstacle = np.zeros((ny, nx))
 
     if True: # parallel plates
@@ -1113,14 +1263,58 @@ def init_simulation(config=default_config):
 
     x_inlet_idx = margin - 15
     x_outlet_idx = nx - margin + 15
+
+    # show only regenerator and inlet/outlet
     xlim_min = x_inlet_idx - 15
     xlim_max = x_outlet_idx + 15
+
+    # show all
+    xlim_min = 0
+    xlim_max = nx
+
+    # Define piston region
+    piston_end = x_inlet_idx // 2
+    piston_start = nx - (nx - x_outlet_idx) // 2 
+    piston_mask = np.zeros((ny, nx), dtype=bool)
+    #piston_mask[:, 0:piston_end] = True
+    #piston_mask[:, piston_start:nx] = True
+
+
+
+    # Define valves
+    valve_mask = np.zeros((ny, nx), dtype=int)
+    # Valve positions
+    x_valve1 = x_inlet_idx + 3
+    x_valve2 = x_outlet_idx - 3
+    # Upper and lower halves
+    y_half = ny // 2
+        
+    # At x_valve1: upper half is right valve (+1), lower half is left valve (-1)
+    valve_mask[:y_half, x_valve1:x_valve1+1] = +1   # right valve (blocks leftward flow)
+    valve_mask[y_half:, x_valve1:x_valve1+1] = -1   # left valve (blocks rightward flow)
+
+    # At x_valve2: upper half is left valve (-1), lower half is right valve (+1)
+    valve_mask[:y_half, x_valve2-1:x_valve2] = -1   # left valve (blocks rightward flow)
+    valve_mask[y_half:, x_valve2-1:x_valve2] = +1   # right valve (blocks leftward flow)
+
+    # Define iso region
+    iso_mask = np.zeros((ny, nx), dtype=bool)
+    iso_mask[y_half-1:y_half+1, (piston_end + x_valve1)//2:x_valve1] = 1 # horizontal separations
+    iso_mask[y_half-1:y_half+1, x_valve2:(x_valve2+piston_start)//2] = 1
+    #iso_mask[:y_half-3+7, piston_end-1:piston_end+1] = 1
+    iso_mask[y_half+3-7:, piston_end-1:piston_end+1] = 1
+    #iso_mask[y_half+3+5:, piston_end-1:piston_end+1] = 1
+    #iso_mask[:y_half-3-5, piston_start-1:piston_start+1] = 1
+    iso_mask[y_half+3-7:, piston_start-1:piston_start+1] = 1
 
     Y, X = np.mgrid[0:ny, 0:nx]
 
     # Boundary conditions
-    u[:, 0] = 1.0
+    u[:, 0] = 1.0 #right flow
     u[:, -1] = u[:, -2]
+
+    u2[:, 0] = -1.0 #left flow
+    u2[:, -1] = u[:, -2]
 
     # Initialize history
     inlet_history = [0]
@@ -1133,7 +1327,8 @@ def init_simulation(config=default_config):
     fig, ax = plt.subplots(figsize=fig_size, dpi=fig_dpi)
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
-    obstacle_contour = ax.contour(obstacle, levels=[0.5], colors='black', linewidths=1.0)
+    obstacle_contour = ax.contour(((obstacle.astype(bool) | (valve_mask != 0)).astype(float)), levels=[0.25], colors='black', linewidths=1.0)
+    #obstacle_contour = ax.contour((((valve_mask != 0)).astype(float)), levels=[0.25], colors='black', linewidths=1.0)
     cf = ax.imshow(T, cmap='coolwarm', origin='lower', interpolation='bicubic',
                    vmin=min(-1, min(min(inlet_history), min(outlet_history))),
                    vmax=max(1, max(max(inlet_history), max(outlet_history))))
@@ -1156,7 +1351,9 @@ def init_simulation(config=default_config):
     efield_soll = 0
 
     # Solve initial flow
-    u[:], v[:], p[:] = solve_flow(u, v, p)
+    
+    u2[:], v2[:], p2[:], streamline_plotly2 = solve_flow(u2, v2, p2, False, -1)
+    u[:], v[:], p[:], streamline_plotly = solve_flow(u, v, p, False, 1)
 
 
 def register_handlers():
