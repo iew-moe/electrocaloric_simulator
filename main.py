@@ -1,4 +1,4 @@
-copyright_version = "© 2025 Stefan Mönch – v1.4b – CC BY-NC 4.0"
+copyright_version = "© 2025 Stefan Mönch – v1.5-develop – CC BY-NC 4.0"
 
 import numpy as np
 import matplotlib
