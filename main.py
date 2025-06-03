@@ -1076,7 +1076,7 @@ def update_frame_noProfile():
     qc_history.append(Q_total_in)
 
     # Optional: trim to last N values for performance/clarity
-    max_points = 500
+    max_points = 5000
     if len(inlet_history) > max_points:
         inlet_history.pop(0)
         outlet_history.pop(0)
