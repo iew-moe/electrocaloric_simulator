@@ -333,9 +333,13 @@ def on_key_down(event):
             console.log(f"🔼 {event.key} key pressed (rising edge)")
         key_states[event.key] = True
     if event.key == "r":
-        global T, first_space_press
+        global T, first_space_press, inlet_history, outlet_history, qc_history, qc_integral
         T[:, :] = 0.0
         first_space_press = True
+        inlet_history = [0]
+        outlet_history = [0]
+        qc_history = [0]
+        qc_integral = [0]
         console.log("🧊 All temperatures reset to 0.0")
 
 def on_key_up(event):
