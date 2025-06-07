@@ -1007,6 +1007,7 @@ def update_frame_noProfile():
         if first_space_press:
             heat_adjustment *= 0.5   # check if it still works with RTBox
             first_space_press = False
+        console.log(f"dTad={dTad}, efield_soll={efield_soll}, efield_ist={efield_ist}")
         console.log(f"🌡️ Heat {'injected' if heat_adjustment > 0 else 'removed'}: {heat_adjustment:+.1f} K")
         T[~fluid_mask] += heat_adjustment
 
