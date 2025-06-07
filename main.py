@@ -1155,7 +1155,7 @@ def bilinear_interpolate_numpy(T, x, y):
 ### Startup/Initialisation of program
 # Default config should already be defined before this
 
-async def init_simulation(config=default_config):
+def init_simulation(config=default_config):
     global nx, ny, dx, dy, dt, mu, rho
     global c_p_fluid, c_p_solid, k_fluid_x, k_fluid_y, k_solid_x, k_solid_y
     global use_convection, n_diffusion_steps, n_convection_step, u_mod_mult, v_mod_mult, dTad
@@ -1377,16 +1377,18 @@ async def init_simulation(config=default_config):
         u[:], v[:], p[:], streamline_plotly = solve_flow(u, v, p, False, 1)
     # load precalculated flow from file
     else:
-        data = await load_pickle_from_relative_url("solve_flow_result.pkl")
+    #    data = await load_pickle_from_relative_url("solve_flow_result.pkl")
+        file_like = io.BytesIO(bytes(pickle_bytes))  # `pickle_bytes` is set by JS
+        data = pickle.load(file_like)
         u, v, p, streamline_plotly = (data[k] for k in ['u', 'v', 'p', 'streamlines'])
         u2, v2, p2, streamline_plotly2 = (data[k] for k in ['u2', 'v2', 'p2', 'streamlines2'])
         
-async def load_pickle_from_relative_url(filename):
-    # Use a relative path (e.g. "solve_flow_result.pkl" or "data/solve_flow_result.pkl")
-    resp = await pyodide.http.open_url(filename)
-    data = resp.read()  # returns bytes
-    obj = pickle.loads(data)
-    return obj
+#async def load_pickle_from_relative_url(filename):
+#    # Use a relative path (e.g. "solve_flow_result.pkl" or "data/solve_flow_result.pkl")
+#    resp = await pyodide.http.open_url(filename)
+#    data = resp.read()  # returns bytes
+#    obj = pickle.loads(data)
+#    return obj
 
 def save_pickle_to_download(data, filename="result.pkl"):
     # Pickle the data to bytes
