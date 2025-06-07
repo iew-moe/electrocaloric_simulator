@@ -655,7 +655,7 @@ def update_heatmap():
         }
     }
 
-    if number % 2 == 0:
+    if num_plates % 2 == 0:
         y_fluid_pos = ny//2
         y_material_pos = y_fluid_pos - (plate_height + plate_spacing)//2
     else:
