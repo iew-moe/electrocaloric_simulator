@@ -912,7 +912,7 @@ def update_frame():
     if is_paused:
         return
     
-    useProfiler = True
+    useProfiler = False
     if useProfiler:
         pr = cProfile.Profile()
         pr.enable()
