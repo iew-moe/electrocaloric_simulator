@@ -1155,7 +1155,7 @@ def bilinear_interpolate_numpy(T, x, y):
 ### Startup/Initialisation of program
 # Default config should already be defined before this
 
-def init_simulation(config=default_config):
+async def init_simulation(config=default_config):
     global nx, ny, dx, dy, dt, mu, rho
     global c_p_fluid, c_p_solid, k_fluid_x, k_fluid_y, k_solid_x, k_solid_y
     global use_convection, n_diffusion_steps, n_convection_step, u_mod_mult, v_mod_mult, dTad
