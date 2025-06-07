@@ -287,7 +287,7 @@
   </div>
   
   <div>
-  <p>  © 2025 Stefan Mönch – v1.5 – CC BY-NC 4.0</p>
+  <p>  © 2025 Stefan Mönch – v1.5b – CC BY-NC 4.0</p>
   </div>
   <div>
     <a href="https://github.com/iew-moe/electrocaloric_simulator" target="_blank" rel="noopener noreferrer">
@@ -303,7 +303,7 @@
       if (event.key === " " || event.code === "Space") {
         event.preventDefault();
       }
-      if (["ArrowLeft", "ArrowRight", " ", "r"].includes(event.key)) {
+      if (["ArrowLeft", "ArrowRight", " ", "r", "l"].includes(event.key)) {
         event.preventDefault();
       }
     }, { passive: false }); // passive: false is important for preventDefault() to work on some browsers
@@ -403,6 +403,12 @@
       //console.log(await pyodide.loadedPackages);
       console.table(await pyodide.loadedPackages);
 
+      // 2. Fetch the pickle file as bytes and hand it to Python as global variable
+      const response = await fetch("solve_flow_result.pkl");
+      const arrayBuffer = await response.arrayBuffer();
+      const pickleBytes = new Uint8Array(arrayBuffer);
+      pyodide.globals.set("pickle_bytes", pickleBytes);
+      
       const code = await fetch("main.py?nocache=" + Date.now()).then(res => res.text());
       await pyodide.runPythonAsync(code);
 

@@ -1,4 +1,4 @@
-copyright_version = "© Stefan Mönch, v1.5, CC BY-NC 4.0"
+copyright_version = "© Stefan Mönch, v1.5b, CC BY-NC 4.0"
 
 import numpy as np
 import matplotlib
@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patheffects import withStroke 
 import io
 import base64
-from js import document, console, window, Plotly
+from js import document, console, window, Plotly, Blob, URL
 from pyodide.ffi import create_proxy, to_js
 from scipy.ndimage import binary_dilation
 import cProfile
@@ -15,6 +15,7 @@ import pstats
 import time
 from math import ceil, sqrt 
 from scipy.ndimage import map_coordinates
+import pickle
 
 
 default_config = {
@@ -341,6 +342,20 @@ def on_key_down(event):
         qc_history = [0]
         qc_integral = [0]
         console.log("🧊 All temperatures reset to 0.0")
+    if event.key == "l":
+        # Collect your params/results
+        data = {
+#            "params": params,
+            "u": u,
+            "v": v,
+            "p": p,
+            "streamlines": streamline_plotly,
+            "u2": u2,
+            "v2": v2,
+            "p2": p2,
+            "streamlines2": streamline_plotly2,            
+        }
+        save_pickle_to_download(data, "solve_flow_result.pkl")
 
 def on_key_up(event):
     if event.key in key_states:
@@ -1355,11 +1370,45 @@ def init_simulation(config=default_config):
     efield_soll = 0
 
     # Solve initial flow
+
+    # calculate initial flow
+    if False:
+        u2[:], v2[:], p2[:], streamline_plotly2 = solve_flow(u2, v2, p2, False, -1)
+        u[:], v[:], p[:], streamline_plotly = solve_flow(u, v, p, False, 1)
+    # load precalculated flow from file (default for web deployment)
+    # if sim parameters are changed, using "l" key a new pkl file can be downloaded and saved to the Repo
+    else:
+    #    data = await load_pickle_from_relative_url("solve_flow_result.pkl")
+        file_like = io.BytesIO(bytes(pickle_bytes))  # `pickle_bytes` is set by JS
+        data = pickle.load(file_like)
+        u, v, p, streamline_plotly = (data[k] for k in ['u', 'v', 'p', 'streamlines'])
+        u2, v2, p2, streamline_plotly2 = (data[k] for k in ['u2', 'v2', 'p2', 'streamlines2'])
+        
+#async def load_pickle_from_relative_url(filename):
+#    # Use a relative path (e.g. "solve_flow_result.pkl" or "data/solve_flow_result.pkl")
+#    resp = await pyodide.http.open_url(filename)
+#    data = resp.read()  # returns bytes
+#    obj = pickle.loads(data)
+#    return obj
+
+def save_pickle_to_download(data, filename="result.pkl"):
+    # Pickle the data to bytes
+    bytes_io = io.BytesIO()
+    pickle.dump(data, bytes_io)
+    bytes_io.seek(0)
+    # Convert to JS Uint8Array
+    uint8 = __import__("pyodide").ffi.to_js(bytes_io.getvalue())
+    blob = Blob.new([uint8], { "type": "application/octet-stream" })
+    url = URL.createObjectURL(blob)
+    # Create a download link and click it
+    link = document.createElement("a")
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
     
-    u2[:], v2[:], p2[:], streamline_plotly2 = solve_flow(u2, v2, p2, False, -1)
-    u[:], v[:], p[:], streamline_plotly = solve_flow(u, v, p, False, 1)
-
-
 def register_handlers():
     global img_element, stream_img_element, graph_img_element, power_img_element
     global toggle_mode, toggle_invert, slider_cycle, slider_delay, toggle_labels, toggle_puase, toggle_isSliders
@@ -1436,6 +1485,8 @@ def startRemoteControl_from_html():
  
     isRemoteControlled = True
     return
+
+
 
 init_simulation()
 register_handlers()
