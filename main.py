@@ -1372,7 +1372,7 @@ def init_simulation(config=default_config):
     # Solve initial flow
 
     # calculate initial flow
-    if False
+    if False:
         u2[:], v2[:], p2[:], streamline_plotly2 = solve_flow(u2, v2, p2, False, -1)
         u[:], v[:], p[:], streamline_plotly = solve_flow(u, v, p, False, 1)
     # load precalculated flow from file
