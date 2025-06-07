@@ -290,6 +290,8 @@ def get_sim_grid_coords(event):
 
     grid_x = int(rel_x * sim_width / rect.width) + xlim_min
     grid_y = ny - 1 - int(rel_y * sim_height / rect.height)
+    grid_x = min(max(grid_x, xlim_min), xlim_max - 1) # clamp to range, to avoid out of bound at borders
+    grid_y = min(max(grid_y, 0), ny - 1)
     return grid_x, grid_y
 
 def is_mouse_in_heatmap(event):
