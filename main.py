@@ -1370,11 +1370,42 @@ def init_simulation(config=default_config):
     efield_soll = 0
 
     # Solve initial flow
+
+    # calculate initial flow
+    if False
+        u2[:], v2[:], p2[:], streamline_plotly2 = solve_flow(u2, v2, p2, False, -1)
+        u[:], v[:], p[:], streamline_plotly = solve_flow(u, v, p, False, 1)
+    # load precalculated flow from file
+    else
+        data = await load_pickle_from_relative_url("solve_flow_result.pkl")
+        u, v, p, streamline_plotly = (data[k] for k in ['u', 'v', 'p', 'streamlines'])
+        u2, v2, p2, streamline_plotly2 = (data[k] for k in ['u2', 'v2', 'p2', 'streamlines2'])
+        
+async def load_pickle_from_relative_url(filename):
+    # Use a relative path (e.g. "solve_flow_result.pkl" or "data/solve_flow_result.pkl")
+    resp = await pyodide.http.open_url(filename)
+    data = resp.read()  # returns bytes
+    obj = pickle.loads(data)
+    return obj
+
+def save_pickle_to_download(data, filename="result.pkl"):
+    # Pickle the data to bytes
+    bytes_io = io.BytesIO()
+    pickle.dump(data, bytes_io)
+    bytes_io.seek(0)
+    # Convert to JS Uint8Array
+    uint8 = __import__("pyodide").ffi.to_js(bytes_io.getvalue())
+    blob = Blob.new([uint8], { "type": "application/octet-stream" })
+    url = URL.createObjectURL(blob)
+    # Create a download link and click it
+    link = document.createElement("a")
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
     
-    u2[:], v2[:], p2[:], streamline_plotly2 = solve_flow(u2, v2, p2, False, -1)
-    u[:], v[:], p[:], streamline_plotly = solve_flow(u, v, p, False, 1)
-
-
 def register_handlers():
     global img_element, stream_img_element, graph_img_element, power_img_element
     global toggle_mode, toggle_invert, slider_cycle, slider_delay, toggle_labels, toggle_puase, toggle_isSliders
@@ -1452,23 +1483,7 @@ def startRemoteControl_from_html():
     isRemoteControlled = True
     return
 
-def save_pickle_to_download(data, filename="result.pkl"):
-    # Pickle the data to bytes
-    bytes_io = io.BytesIO()
-    pickle.dump(data, bytes_io)
-    bytes_io.seek(0)
-    # Convert to JS Uint8Array
-    uint8 = __import__("pyodide").ffi.to_js(bytes_io.getvalue())
-    blob = Blob.new([uint8], { "type": "application/octet-stream" })
-    url = URL.createObjectURL(blob)
-    # Create a download link and click it
-    link = document.createElement("a")
-    link.href = url
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+
 
 init_simulation()
 register_handlers()
