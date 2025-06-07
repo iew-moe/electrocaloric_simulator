@@ -1007,6 +1007,11 @@ def update_frame_noProfile():
     #        heat_adjustment = -dTad
     #space_previous = space_current
 
+    # attempt to fix "crash after 6 minutes"
+    if head_adjustment == NaN
+        console.log(f"❌❌❌ head_adjustment was NaN, set to 0 to avoid crash!")
+        head_adjustment = 0.0
+    
     if heat_adjustment != 0.0:
         if first_space_press:
             heat_adjustment *= 0.5   # check if it still works with RTBox
