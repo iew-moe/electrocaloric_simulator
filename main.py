@@ -1008,7 +1008,7 @@ def update_frame_noProfile():
     #space_previous = space_current
 
     # attempt to fix "crash after 6 minutes"
-    if head_adjustment == NaN
+    if head_adjustment == NaN:
         console.log(f"❌❌❌ head_adjustment was NaN, set to 0 to avoid crash!")
         head_adjustment = 0.0
     
