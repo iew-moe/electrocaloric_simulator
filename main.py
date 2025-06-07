@@ -666,7 +666,7 @@ def update_heatmap():
         'type': 'scatter',
         'x': [int((xlim_min + xlim_max) / 2)],
         #'y': [int(ny / 2) - 2],
-        'y': [y_fluid_pos]
+        'y': [y_fluid_pos],
         #'text': ["<b>heat transfer fluid</b> (<i>silicone oil</i> or <i>water</i>)"],
         'text': ["<b>heat transfer fluid</b>"],
         'mode': 'text',
