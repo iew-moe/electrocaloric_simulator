@@ -262,11 +262,11 @@ def solve_flow(u_in, v_in, p_in, skipSolve, flowDir):
 # === Modify Grid at Click Location ===
 def modify_obstacle_at_click(x, y, button=1):
     radius = 1.7
-    for dy in range(-ceil(radius), ceil(radius) + 1):
-        for dx in range(-ceil(radius), ceil(radius) + 1):
+    for dy in range(-ceil(radius)-2, ceil(radius) + 1+2):
+        for dx in range(-ceil(radius)-2, ceil(radius) + 1+2):
             px, py = x + dx, y + dy
-            if 0 <= px < nx and 0 <= py < ny:
-                if sqrt(dx**2 + dy**2) <= radius:
+            if sqrt((dx/3)**2 + dy**2) <= radius:            
+                if 0 <= px < nx and 0 <= py < ny:
                     if button == 1:
                         obstacle[py, px] = 1
                         fluid_mask[py, px] = 0
