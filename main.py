@@ -655,12 +655,18 @@ def update_heatmap():
         }
     }
 
-
+    if number % 2 == 0:
+        y_fluid_pos = ny//2
+        y_material_pos = y_fluid_pos - (plate_height + plate_spacing)//2
+    else:
+        y_fluid_pos = ny//2 + (plate_height + plate_spacing)//2
+        y_material_pos = ny//2
     # put Text Annotation (workaround: use labeled scatterplot...)
     trace1 = {
         'type': 'scatter',
         'x': [int((xlim_min + xlim_max) / 2)],
-        'y': [int(ny / 2) - 2],
+        #'y': [int(ny / 2) - 2],
+        'y': [y_fluid_pos]
         #'text': ["<b>heat transfer fluid</b> (<i>silicone oil</i> or <i>water</i>)"],
         'text': ["<b>heat transfer fluid</b>"],
         'mode': 'text',
@@ -673,7 +679,8 @@ def update_heatmap():
     trace2 = {
         'type': 'scatter',
         'x': [int((xlim_min + xlim_max) / 2)],
-        'y': [4],
+        #'y': [4],
+        'y': [y_material_pos],
         #'text': ["<b>electrocaloric material</b> (<i>PVDF polymer</i> or <i>PST ceramic</i>)"],
         'text': ["<b>electrocaloric material</b>"],
         #'text': ['<span style="background-color:rgba(255,255,255,0.7); padding:2px;"><b>electrocaloric material</b> (<i>PVDF polymer</i> or <i>PST ceramic</i>)</span>'],
