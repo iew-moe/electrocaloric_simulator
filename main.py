@@ -656,11 +656,11 @@ def update_heatmap():
     }
 
     if num_plates % 2 == 0:
-        y_fluid_pos = ny/2-0.7
-        y_material_pos = y_fluid_pos - (plate_height + plate_spacing)/2-0.7
+        y_fluid_pos = ny/2-0.87
+        y_material_pos = y_fluid_pos - (plate_height + plate_spacing)/2-0.87
     else:
-        y_fluid_pos = ny/2 + (plate_height + plate_spacing)/2-0.7
-        y_material_pos = ny/2-0.7
+        y_fluid_pos = ny/2 + (plate_height + plate_spacing)/2-0.87
+        y_material_pos = ny/2-0.87
     # put Text Annotation (workaround: use labeled scatterplot...)
     trace1 = {
         'type': 'scatter',
