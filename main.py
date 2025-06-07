@@ -1487,5 +1487,5 @@ def startRemoteControl_from_html():
 
 
 
-await init_simulation()
+init_simulation()
 register_handlers()
