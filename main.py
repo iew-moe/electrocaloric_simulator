@@ -1378,11 +1378,13 @@ def init_simulation(config=default_config):
     # load precalculated flow from file (default for web deployment)
     # if sim parameters are changed, using "l" key a new pkl file can be downloaded and saved to the Repo
     else:
+        u2[:], v2[:], p2[:], streamline_plotly2 = solve_flow(u2, v2, p2, True, -1) # to initialize everything else
+        u[:], v[:], p[:], streamline_plotly = solve_flow(u, v, p, True, 1)
     #    data = await load_pickle_from_relative_url("solve_flow_result.pkl")
         file_like = io.BytesIO(bytes(pickle_bytes))  # `pickle_bytes` is set by JS
         data = pickle.load(file_like)
-        u, v, p, streamline_plotly = (data[k] for k in ['u', 'v', 'p', 'streamlines'])
         u2, v2, p2, streamline_plotly2 = (data[k] for k in ['u2', 'v2', 'p2', 'streamlines2'])
+        u, v, p, streamline_plotly = (data[k] for k in ['u', 'v', 'p', 'streamlines'])
         
 #async def load_pickle_from_relative_url(filename):
 #    # Use a relative path (e.g. "solve_flow_result.pkl" or "data/solve_flow_result.pkl")
