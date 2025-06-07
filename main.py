@@ -1376,7 +1376,7 @@ def init_simulation(config=default_config):
         u2[:], v2[:], p2[:], streamline_plotly2 = solve_flow(u2, v2, p2, False, -1)
         u[:], v[:], p[:], streamline_plotly = solve_flow(u, v, p, False, 1)
     # load precalculated flow from file
-    else
+    else:
         data = await load_pickle_from_relative_url("solve_flow_result.pkl")
         u, v, p, streamline_plotly = (data[k] for k in ['u', 'v', 'p', 'streamlines'])
         u2, v2, p2, streamline_plotly2 = (data[k] for k in ['u2', 'v2', 'p2', 'streamlines2'])
