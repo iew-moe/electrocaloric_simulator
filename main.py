@@ -303,7 +303,8 @@ def is_mouse_in_heatmap(event):
 
 #=== Handlers ===
 def on_mouse_down(event): 
-    modify_obstacle_at_click(*get_sim_grid_coords(event), event.buttons)
+    if is_mouse_in_heatmap(event):
+        modify_obstacle_at_click(*get_sim_grid_coords(event), event.buttons)
 
 def on_mouse_move(event):
   #  console.log(f"Mouse moved ({grid_x}, {grid_y}), skip ({not mouse_is_down or event.buttons == 0})")
@@ -318,7 +319,8 @@ def on_mouse_move(event):
     if event.buttons == 0:
         return
 
-    modify_obstacle_at_click(*get_sim_grid_coords(event), event.buttons)
+    if is_mouse_in_heatmap(event):
+        modify_obstacle_at_click(*get_sim_grid_coords(event), event.buttons)
 
 
 def on_mouse_up(event):
