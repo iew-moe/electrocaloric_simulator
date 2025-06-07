@@ -13,7 +13,7 @@ from scipy.ndimage import binary_dilation
 import cProfile
 import pstats
 import time
-from math import ceil, sqrt 
+from math import ceil, sqrt, isnan
 from scipy.ndimage import map_coordinates
 import pickle
 
