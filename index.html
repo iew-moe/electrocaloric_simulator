@@ -403,6 +403,12 @@
       //console.log(await pyodide.loadedPackages);
       console.table(await pyodide.loadedPackages);
 
+      // 2. Fetch the pickle file as bytes and hand it to Python as global variable
+      const response = await fetch("solve_flow_result.pkl");
+      const arrayBuffer = await response.arrayBuffer();
+      const pickleBytes = new Uint8Array(arrayBuffer);
+      pyodide.globals.set("pickle_bytes", pickleBytes);
+      
       const code = await fetch("main.py?nocache=" + Date.now()).then(res => res.text());
       await pyodide.runPythonAsync(code);
 
