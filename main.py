@@ -723,7 +723,7 @@ def update_heatmap():
     trace5 = {
         'type': 'scatter',
         'x': [int((xlim_min + xlim_max) / 2)],
-        'y': [2],  # Adjust for the correct placement
+        'y': [1.2],  # Adjust for the correct placement
         'text': [f'<i>{copyright_version}</i>'],
         'mode': 'text',
         'textposition': 'bottom center',
