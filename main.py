@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patheffects import withStroke 
 import io
 import base64
-from js import document, console, window, Plotly
+from js import document, console, window, Plotly, Blob, URL
 from pyodide.ffi import create_proxy, to_js
 from scipy.ndimage import binary_dilation
 import cProfile
@@ -15,6 +15,7 @@ import pstats
 import time
 from math import ceil, sqrt 
 from scipy.ndimage import map_coordinates
+import pickle
 
 
 default_config = {
@@ -341,6 +342,20 @@ def on_key_down(event):
         qc_history = [0]
         qc_integral = [0]
         console.log("🧊 All temperatures reset to 0.0")
+    if event.key == "l":
+        # Collect your params/results
+        data = {
+#            "params": params,
+            "u": u,
+            "v": v,
+            "p": p,
+            "streamlines": streamline_plotly,
+            "u2": u2,
+            "v2": v2,
+            "p2": p2,
+            "streamlines2": streamline_plotly2,            
+        }
+        save_pickle_to_download(data, "solve_flow_result.pkl")
 
 def on_key_up(event):
     if event.key in key_states:
@@ -1436,6 +1451,24 @@ def startRemoteControl_from_html():
  
     isRemoteControlled = True
     return
+
+def save_pickle_to_download(data, filename="result.pkl"):
+    # Pickle the data to bytes
+    bytes_io = io.BytesIO()
+    pickle.dump(data, bytes_io)
+    bytes_io.seek(0)
+    # Convert to JS Uint8Array
+    uint8 = __import__("pyodide").ffi.to_js(bytes_io.getvalue())
+    blob = Blob.new([uint8], { "type": "application/octet-stream" })
+    url = URL.createObjectURL(blob)
+    # Create a download link and click it
+    link = document.createElement("a")
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
 
 init_simulation()
 register_handlers()
