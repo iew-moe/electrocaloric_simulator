@@ -1008,7 +1008,7 @@ def update_frame_noProfile():
     #space_previous = space_current
 
     # attempt to fix "crash after 6 minutes"
-    if heat_adjustment == NaN:
+    if math.isnan(heat_adjustment)
         console.log(f"❌❌❌ heat_adjustment was NaN, set to 0 to avoid crash!")
         heat_adjustment = 0.0
     
