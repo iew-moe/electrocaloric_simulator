@@ -622,6 +622,8 @@ def update_heatmap():
     }
 
     heatmap_layout = {
+        'template': 'plotly_dark', 
+        'font': {'color': 'white'},
         'margin': {'l': 0, 'r': 0, 't': 0, 'b': 0},
         'autosize': False,
         'height': 200,
@@ -663,6 +665,8 @@ def update_heatmap():
         y_material_pos = ny/2-0.87
     # put Text Annotation (workaround: use labeled scatterplot...)
     trace1 = {
+        'template': 'plotly_dark', 
+        'font': {'color': 'white'},
         'type': 'scatter',
         'x': [int((xlim_min + xlim_max) / 2)],
         #'y': [int(ny / 2) - 2],
