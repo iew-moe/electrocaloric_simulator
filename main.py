@@ -731,7 +731,8 @@ def update_heatmap():
         'cliponaxis': False,        
         'hoverinfo': 'skip',
         'textfont': {
-            'color': 'white'
+            'color': 'white',
+            'size': 48
         }
     }
 
