@@ -806,14 +806,14 @@ def update_temperature_graph_noProfile():
     temp_data = [
         {
             'x': x_data,
-            'y': inlet_history + T_show_offset,
+            'y': [x + T_show_offset for x in inlet_history],
             'name': r'cool-side temperature <i>T</i><sub>C</sub> [°C]',
             'line': {'color': 'blue'},
             'type': 'scatter'
         },
         {
             'x': x_data,
-            'y': outlet_history + T_show_offset,
+            'y': [x + T_show_offset for x in outlet_history],
             'name': r'hot-side temperature <i>T</i><sub>H</sub> [°C]',
             'line': {'color': 'red'},
             'type': 'scatter'
@@ -1200,7 +1200,7 @@ def init_simulation(config=default_config):
     global T_show_offset
 
     current_direction = 0 # for selection of which streamline_plot to show
-    T_show_offset = 22.0 # just for displaying... internaly calculated starting with 0
+    T_show_offset = 20.0 # just for displaying... internaly calculated starting with 0
     
     # Timekeeping
     import time
