@@ -724,16 +724,12 @@ def update_heatmap():
         'type': 'scatter',
         'x': [int((xlim_min + xlim_max) / 2)],
         'y': [1.2],  # Adjust for the correct placement
-        'text': [f'<i>{copyright_version}</i>'],
+        'text': [f'<i>{copyright_version}</i> <font color="#FFFFFF">xxx</font>'],
         'mode': 'text',
         'textposition': 'bottom center',
         'showlegend': False,
         'cliponaxis': False,        
-        'hoverinfo': 'skip',
-        'textfont': {
-            'color': 'white',
-            'size': 48
-        }
+        'hoverinfo': 'skip'
     }
 
     if not ((mouseX == None) or (mouseY == None)):
