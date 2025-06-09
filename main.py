@@ -1245,7 +1245,7 @@ def init_simulation(config=default_config):
     zmax = 1 # inital scaling
 
     # Arrays
-    T = np.full((ny, nx), 22) # initial temperature = "roomtemperature"
+    T = np.full((ny, nx), 22.0) # initial temperature = "roomtemperature"
     u = np.zeros((ny, nx))
     u2 = np.zeros((ny, nx))  
     v = np.zeros((ny, nx))
