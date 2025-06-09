@@ -831,8 +831,10 @@ def update_temperature_graph_noProfile():
             'xanchor': 'center',
             'x': 0.5,
         },
-        'xaxis': {'visible': True, 'title': r'time <i>t</i>'},
-        'yaxis': {'visible': True, 'title': r'temperature <i>T</i> [°C]'},
+        #'xaxis': {'visible': True, 'title': r'time <i>t</i>'},
+        #'yaxis': {'visible': True, 'title': r'temperature <i>T</i> [°C]'},
+        'xaxis': r'time <i>t</i>',
+        'yaxis': r'temperature <i>T</i> [°C]',
         'height': 200
     }
 
