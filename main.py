@@ -696,7 +696,7 @@ def update_heatmap():
         #'x': [xlim_min + 22],  # Adjust for the correct placement
         'x': [(piston_end + x_valve1)//2],  # Adjust for the correct placement
         'y': [int(3 * ny / 4)],
-        'text': ["<b>cool-side<br><i>T</i><sub>C</sub>-<i>T</i><sub>0</sub></b>"],
+        'text': ["<b>cool-side<br><i>T</i><sub>C</sub></b>"],
         'mode': 'text',
         'textposition': 'middle center',
         #'textangle': 90,  # Rotate text by 90 degrees
@@ -710,7 +710,7 @@ def update_heatmap():
         #'x': [xlim_max - 22],  # Adjust for the correct placement
         'x': [(x_valve2+piston_start)//2],
         'y': [int(3* ny / 4)],
-        'text': ["<b>hot-side<br><i>T</i><sub>H</sub>-<i>T</i><sub>0</sub></b>"],
+        'text': ["<b>hot-side<br><i>T</i><sub>H</sub></b>"],
         'mode': 'text',
         'textposition': 'middle center',
         #'textangle': 90,  # Rotate text by 90 degrees
@@ -729,7 +729,10 @@ def update_heatmap():
         'textposition': 'bottom center',
         'showlegend': False,
         'cliponaxis': False,        
-        'hoverinfo': 'skip'
+        'hoverinfo': 'skip',
+        'yaxis_title': {
+            'text': 'temp.'
+        }
     }
 
     if not ((mouseX == None) or (mouseY == None)):
