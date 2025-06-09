@@ -741,7 +741,7 @@ def update_heatmap():
         'type': 'scatter',
         'x': [int((xlim_min + xlim_max) / 2)],
         'y': [ny-2],  # Adjust for the correct placement
-        'text':  [f"{T_atCursor:.2f} °C" if T_atCursor is not None else ''],
+        'text':  [f"{(T_atCursor+T_show_offset):.2f} °C" if T_atCursor is not None else ''],
         'mode': 'text',
         'textposition': 'bottom center',
         'showlegend': False,
@@ -803,15 +803,15 @@ def update_temperature_graph_noProfile():
     temp_data = [
         {
             'x': x_data,
-            'y': inlet_history,
-            'name': r'Cool-side temperature <i>T</i><sub>C</sub> [°C]',
+            'y': inlet_history + T_show_offset,
+            'name': r'cool-side temperature <i>T</i><sub>C</sub> [°C]',
             'line': {'color': 'blue'},
             'type': 'scatter'
         },
         {
             'x': x_data,
-            'y': outlet_history,
-            'name': r'Hot-side temperature <i>T</i><sub>H</sub> [°C]',
+            'y': outlet_history + T_show_offset,
+            'name': r'hot-side temperature <i>T</i><sub>H</sub> [°C]',
             'line': {'color': 'red'},
             'type': 'scatter'
         }
@@ -1194,9 +1194,11 @@ def init_simulation(config=default_config):
     global valve_mask, x_valve1, x_valve2
     global u2,v2,p2 # for left low (if valves are used, to calculate two velocity fields)
     global current_direction
+    global T_show_offset
 
     current_direction = 0 # for selection of which streamline_plot to show
-
+    T_show_offset = 22 # just for displaying... internaly calculated starting with 0
+    
     # Timekeeping
     import time
     global last_time, elapsed_time, is_paused
