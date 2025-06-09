@@ -724,7 +724,7 @@ def update_heatmap():
         'type': 'scatter',
         'x': [int((xlim_min + xlim_max) / 2)],
         'y': [1.2],  # Adjust for the correct placement
-        'text': [f'<i>{copyright_version}</i> <font color="#FFFFFF">xxx</font>'],
+        'text': [f'<i>{copyright_version}</i>'],
         'mode': 'text',
         'textposition': 'bottom center',
         'showlegend': False,
