@@ -729,7 +729,10 @@ def update_heatmap():
         'textposition': 'bottom center',
         'showlegend': False,
         'cliponaxis': False,        
-        'hoverinfo': 'skip'
+        'hoverinfo': 'skip',
+        'textfont': {
+            'color': 'white'
+        }
     }
 
     if not ((mouseX == None) or (mouseY == None)):
@@ -1197,7 +1200,7 @@ def init_simulation(config=default_config):
     global T_show_offset
 
     current_direction = 0 # for selection of which streamline_plot to show
-    T_show_offset = 22 # just for displaying... internaly calculated starting with 0
+    T_show_offset = 22.0 # just for displaying... internaly calculated starting with 0
     
     # Timekeeping
     import time
