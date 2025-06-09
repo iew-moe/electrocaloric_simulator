@@ -818,7 +818,7 @@ def update_temperature_graph_noProfile():
     ]
 
     temp_layout = {
-        'margin': {'l': 130, 'r': 10, 't': 10, 'b': 120},
+        'margin': {'l': 30, 'r': 10, 't': 10, 'b': 20},
         'showlegend': True,
         #'font' : {'size': 1400},
         'legend': {
@@ -828,8 +828,8 @@ def update_temperature_graph_noProfile():
             'xanchor': 'center',
             'x': 0.5,
         },
-        'xaxis': {'visible': True, 'title': 'time <i>t</i>'},
-        'yaxis': {'visible': True, 'title': 'temperature <i>T</i> [°C]'},
+        'xaxis': {'visible': True, 'title': r'time <i>t</i>'},
+        'yaxis': {'visible': True, 'title': r'temperature <i>T</i> [°C]'},
         'height': 200
     }
 
