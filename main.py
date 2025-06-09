@@ -818,7 +818,7 @@ def update_temperature_graph_noProfile():
     ]
 
     temp_layout = {
-        'margin': {'l': 30, 'r': 10, 't': 10, 'b': 20},
+        'margin': {'l': 130, 'r': 10, 't': 10, 'b': 120},
         'showlegend': True,
         #'font' : {'size': 1400},
         'legend': {
