@@ -741,7 +741,7 @@ def update_heatmap():
         'type': 'scatter',
         'x': [int((xlim_min + xlim_max) / 2)],
         'y': [ny-2],  # Adjust for the correct placement
-        'text':  [f'{T_atCursor:.2f}' if T_atCursor is not None else ''],
+        'text':  [f'{T_atCursor:.2f °C}' if T_atCursor is not None else ''],
         'mode': 'text',
         'textposition': 'bottom center',
         'showlegend': False,
@@ -804,14 +804,14 @@ def update_temperature_graph_noProfile():
         {
             'x': x_data,
             'y': inlet_history,
-            'name': r'Cool-side temperature <i>T</i><sub>C</sub>-<i>T</i><sub>0</sub> [K]',
+            'name': r'Cool-side temperature <i>T</i><sub>C</sub> [°C]',
             'line': {'color': 'blue'},
             'type': 'scatter'
         },
         {
             'x': x_data,
             'y': outlet_history,
-            'name': r'Hot-side temperature <i>T</i><sub>H</sub>-<i>T</i><sub>0</sub> [K]',
+            'name': r'Hot-side temperature <i>T</i><sub>H</sub> [°C]',
             'line': {'color': 'red'},
             'type': 'scatter'
         }
@@ -828,8 +828,8 @@ def update_temperature_graph_noProfile():
             'xanchor': 'center',
             'x': 0.5,
         },
-        'xaxis': {'visible': False},
-        'yaxis': {'visible': False},
+        'xaxis': {'visible': True, 'title': 'time <i>t</i>},
+        'yaxis': {'visible': True, 'title': 'temperature <i>T</i> [°C]},
         'height': 200
     }
 
@@ -1245,7 +1245,7 @@ def init_simulation(config=default_config):
     zmax = 1 # inital scaling
 
     # Arrays
-    T = np.zeros((ny, nx))
+    T = np.full((ny, nx), 22) # initial temperature = "roomtemperature"
     u = np.zeros((ny, nx))
     u2 = np.zeros((ny, nx))  
     v = np.zeros((ny, nx))
