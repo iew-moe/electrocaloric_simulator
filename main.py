@@ -741,7 +741,7 @@ def update_heatmap():
         'type': 'scatter',
         'x': [int((xlim_min + xlim_max) / 2)],
         'y': [ny-2],  # Adjust for the correct placement
-        'text':  [f'{T_atCursor:.2f °C}' if T_atCursor is not None else ''],
+        'text':  [f"{T_atCursor:.2f} °C" if T_atCursor is not None else ''],
         'mode': 'text',
         'textposition': 'bottom center',
         'showlegend': False,
@@ -1245,7 +1245,8 @@ def init_simulation(config=default_config):
     zmax = 1 # inital scaling
 
     # Arrays
-    T = np.full((ny, nx), 22.0) # initial temperature = "roomtemperature"
+    #T = np.full((ny, nx), 22.0) # initial temperature = "roomtemperature"
+    T = np.zeros((ny, nx))
     u = np.zeros((ny, nx))
     u2 = np.zeros((ny, nx))  
     v = np.zeros((ny, nx))
