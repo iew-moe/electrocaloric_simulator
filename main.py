@@ -1,4 +1,4 @@
-copyright_version = "© Stefan Mönch, v1.6, CC BY-NC 4.0"
+copyright_version = "© Stefan Mönch, v1.6b, CC BY-NC 4.0"
 
 import numpy as np
 import matplotlib
@@ -356,12 +356,13 @@ def on_key_down(event):
             console.log(f"🔼 {event.key} key pressed (rising edge)")
         key_states[event.key] = True
     if event.key == "r":
-        global T, first_space_press, inlet_history, outlet_history, qc_history, qc_integral, fluid_position_ist, last_time, elapsed_time, zmin, zmax
+        global T, first_space_press, inlet_history, outlet_history, qc_history, qc_mean_history, qc_integral, fluid_position_ist, last_time, elapsed_time, zmin, zmax
         T[:, :] = 0.0
         first_space_press = True
         inlet_history = [0]
         outlet_history = [0]
         qc_history = [0]
+        qc_mean_history = [0]
         qc_integral = [0]
         fluid_position_ist = 0
         last_time = time.time()
@@ -466,7 +467,9 @@ def compute_heat_flow(x, u_mod, v_mod):
     #console.log(f"XXX")
     if x <= 0 or x >= nx - 1:
         return 0.0, 0.0
-    valid_y = fluid_mask[:, x]
+    y_slice = slice(ny//2,ny)
+    valid_y = fluid_mask[y_slice,x] # only through upper half (valve)
+    #valid_y = fluid_mask[:, x]
     cp = c_p_fluid  # assuming fluid only for simplicity
 
     # Convective heat flow: ρ * cp * u * T * dy
@@ -480,15 +483,23 @@ def compute_heat_flow(x, u_mod, v_mod):
 
     #u_mod = u_mod * u_mod_mult * n_convection_step
     #v_mod = v_mod * v_mod_mult * n_convection_step
+    # only if pumped through that valve (otherwise no mass flow!)
+    #if current_direction == 1:
     u_mod = u_mod * n_convection_step
-    v_mod = v_mod * n_convection_step
+    #else:
+    #    u_mod = np.zeros_like(u_mod)
+    #v_mod = v_mod * n_convection_step
     
-    Q_conv = np.sum(rho * cp * u_mod_mult * u_mod[valid_y, x] * T[valid_y, x] * dy)
+    Q_conv = np.sum(rho * cp * u_mod_mult * u_mod[y_slice, x] * T[y_slice, x] * dy)
 
     # Diffusive heat flow: -k * ∂T/∂x * dy
     dT_dx = (T[:, x+1] - T[:, x-1]) / (2 * dx) * n_diffusion_steps
     k_map = np.where(piston_mask[:, x], 0.0, np.where(fluid_mask[:, x], k_fluid_x, k_solid_x))
-    Q_diff = -np.sum(k_map[valid_y] * dT_dx[valid_y] * dy)
+    #Q_diff = -np.sum(k_map[valid_y] * dT_dx[valid_y] * dy)
+
+    dT_dx_upper = dT_dx[y_slice][valid_y]
+    k_map_upper = k_map[y_slice][valid_y]
+    Q_diff = -np.sum(k_map_upper * dT_dx_upper * dy)
 
     return Q_conv, Q_diff
 
@@ -914,6 +925,13 @@ def update_temperature_graph_noProfile():
             'name': 'Cooling power <i>Q&#775;</i><sub>C</sub> [W]',
             'line': {'color': 'green'},
             'type': 'scatter'
+        },
+      {
+            'x': x_data,
+            'y': qc_mean_history,
+            'name': 'Average cooling power <i>Q&#775;</i><sub>C,AVG</sub> [W]',
+            'line': {'color': 'green', 'dash': 'dot', 'width': 1},
+            'type': 'scatter'
         }
     ]
 
@@ -1162,14 +1180,12 @@ def update_frame_noProfile():
    
     
     # Use fluid_mask to restrict to fluid cells
-    inlet_temp = np.mean(T[:, x_inlet_idx][fluid_mask[:, x_inlet_idx]])
-    outlet_temp = np.mean(T[:, x_outlet_idx][fluid_mask[:, x_outlet_idx]])
+    inlet_temp = np.mean(T[ny//2:, x_inlet_idx][fluid_mask[ny//2:, x_inlet_idx]])
+    outlet_temp = np.mean(T[ny//2:, x_outlet_idx][fluid_mask[ny//2:, x_outlet_idx]])
 
     Tspan = outlet_temp - inlet_temp
-    Q_conv_in, Q_diff_in = compute_heat_flow(x_inlet_idx, u_mod, v_mod)
+    Q_conv_in, Q_diff_in = compute_heat_flow(x_inlet_idx - 2, u_mod, v_mod)
     Q_total_in = Q_conv_in + Q_diff_in
-    #Q_conv_in = 1.23 ## has to be fixed 
-
     current_time = time.time()
     frame_duration = current_time - last_frame_time
     fps = 1.0 / frame_duration if frame_duration > 0 else 0
@@ -1181,13 +1197,15 @@ def update_frame_noProfile():
     inlet_history.append(inlet_temp)
     outlet_history.append(outlet_temp)
     qc_history.append(Q_total_in)
+    qc_mean_history.append(np.mean(qc_history[-60:]))  # Mean of last 10 values
 
     # Optional: trim to last N values for performance/clarity
-    max_points = 5000
+    max_points = 1000
     if len(inlet_history) > max_points:
         inlet_history.pop(0)
         outlet_history.pop(0)
         qc_history.pop(0)
+        qc_mean_history.pop(0)
         
     update_temperature_graph()
 
@@ -1258,7 +1276,7 @@ def init_simulation(config=default_config):
     global margin, plate_height, plate_spacing, num_plates
     global start_y, Y, X, fig, ax, cf, obstacle_contour
     global streamline_plotly, streamline_plotly2
-    global inlet_history, outlet_history, qc_history, qc_integral
+    global inlet_history, outlet_history, qc_history, qc_mean_history, qc_integral
     global step_counter, show_labels, key_states
     global space_previous, first_space_press
     global zmin, zmax
@@ -1434,6 +1452,7 @@ def init_simulation(config=default_config):
     inlet_history = [0]
     outlet_history = [0]
     qc_history = [0]
+    qc_mean_history = [0]
     qc_integral = [0]
     streamline_plotly = []
 
