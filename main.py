@@ -1,4 +1,4 @@
-copyright_version = "© Stefan Mönch, v1.5b, CC BY-NC 4.0"
+copyright_version = "© Stefan Mönch, v1.6, CC BY-NC 4.0"
 
 import numpy as np
 import matplotlib
@@ -20,20 +20,38 @@ import pickle
 
 default_config = {
     # Simulation
-    "nx": 360, "ny": 25, "dx": 1.0, "dy": 1.0, "dt": 0.1,
+    "nx": 360, "ny": 29, "dx": 1.0, "dy": 1.0, "dt": 0.1,
     "mu": 0.05, "rho": 1.0,
     
     # Material
     "c_p_fluid": 1.0, "c_p_solid": 1.0,
-    "k_fluid": 0.5, "k_solid": 0.1,
+    "k_fluid": 0.5, "k_solid": 0.05,
     "n_diff": 50, "n_conv": 50,
     "dTad": 2.0,
 
     # Plates / Geometry
-    "num_plates": 2,
-    "plate_height": 8,
-    "plate_spacing": 9
+    "num_plates": 4,
+    "plate_height": 4,
+    "plate_spacing": 3
 }
+
+# old config until V1.5
+# default_config = {
+#     # Simulation
+#     "nx": 360, "ny": 25, "dx": 1.0, "dy": 1.0, "dt": 0.1,
+#     "mu": 0.05, "rho": 1.0,
+    
+#     # Material
+#     "c_p_fluid": 1.0, "c_p_solid": 1.0,
+#     "k_fluid": 0.5, "k_solid": 0.1,
+#     "n_diff": 50, "n_conv": 50,
+#     "dTad": 2.0,
+
+#     # Plates / Geometry
+#     "num_plates": 2,
+#     "plate_height": 8,
+#     "plate_spacing": 9
+# }
  
 #from wgpy_backends import get_backend_name
 #from wgpy_backends.webgpu.elementwise_kernel import ElementwiseKernel as WGPUElementwiseKernel
@@ -338,14 +356,22 @@ def on_key_down(event):
             console.log(f"🔼 {event.key} key pressed (rising edge)")
         key_states[event.key] = True
     if event.key == "r":
-        global T, first_space_press, inlet_history, outlet_history, qc_history, qc_integral
+        global T, first_space_press, inlet_history, outlet_history, qc_history, qc_integral, fluid_position_ist, last_time, elapsed_time, zmin, zmax
         T[:, :] = 0.0
         first_space_press = True
         inlet_history = [0]
         outlet_history = [0]
         qc_history = [0]
         qc_integral = [0]
-        console.log("🧊 All temperatures reset to 0.0")
+        fluid_position_ist = 0
+        last_time = time.time()
+        elapsed_time = 0        
+        #last_time = time.time()
+
+        zmin = -0.5*dTad
+        zmax = 0.5*dTad
+
+        console.log("🧊 All reset to 0.0")
     if event.key == "l":
         # Collect your params/results
         data = {
@@ -370,6 +396,12 @@ def on_key_up(event):
 # control input from html
 def on_toggle_mode(event):
     is_automatic = toggle_mode.checked
+    global last_time, elapsed_time, fluid_position_ist
+    last_time = time.time()
+    #current_time = time.time()
+    elapsed_time = 0
+    #elapsed_time = float(slider_cycle.value)/4.0 # 1/4 phase as start to only pump half to the right at the start
+    fluid_position_ist = 0    
     console.log(f"🔁 Automatic Mode: {'ON' if is_automatic else 'OFF'}")
     # Do something in Python based on mode
     # For example, disable simulation control logic when automatic is off
@@ -473,9 +505,11 @@ def get_automatic_clocks():
     pump_delay_ratio = float(slider_delay.value) / 100.0
     invert = toggle_invert.checked
 
-    t = elapsed_time % cycle_time
+    t = (elapsed_time *1.25) % cycle_time
 
     clk_heat = 1 if t < (cycle_time / 2) else 0
+    if invert:
+        clk_heat = 1- clk_heat
 
     # Delayed clock
     delay = pump_delay_ratio * cycle_time
@@ -483,8 +517,7 @@ def get_automatic_clocks():
     clk_flow = 1 if t2 < (cycle_time / 2) else 0
     #clk_flow = 0 if t2 < (cycle_time / 2) else 1
 
-    if invert:
-        clk_flow = 1 - clk_flow
+    
 
     return clk_heat, clk_flow
 
@@ -589,6 +622,25 @@ def update_heatmap():
         'reversescale': True,
         'showscale': False,
         'hoverinfo': 'skip'
+    }
+
+    # Piston line (*10 weil fluid_position in 0.1er Schritten variiert wird...)
+    # Achtung: dt wird nicht korrekt berücksichtigt. dt = const, clk = const, aber fps is nicht konstant!
+    contour_piston = {
+    'x': [int(fluid_position_ist*n_convection_step*u_mod_mult*dt*10 - 1) % nx,int(fluid_position_ist*n_convection_step*u_mod_mult*dt*10 - 1) % nx],
+    'y': [1, ny-2],  # or [min(y_vals), max(y_vals)]
+    'mode': 'lines',
+    'type': 'scatter',
+    'line': {
+        'color': 'white',
+        'width': 1,
+        'dash': 'dot'  # or 'solid', 'dot', etc.
+    },
+    #'name': f'x = {x0}',
+    'hoverinfo': 'skip',
+    'reversescale': True,
+    #'showscale': False,
+    'showlegend': False
     }
 
     zmin = min(-0.5*dTad, zmin)
@@ -722,11 +774,12 @@ def update_heatmap():
     # Adding copyright text
     trace5 = {
         'type': 'scatter',
-        'x': [int((xlim_min + xlim_max) / 2)],
-        'y': [1.2],  # Adjust for the correct placement
-        'text': [f'<i>{copyright_version}</i>'],
+        #'x': [int((xlim_min + xlim_max) / 2)],
+        'x': [int(nx*0.95-1)],
+        'y': [2],  # Adjust for the correct placement
+        'text': [f'<i><sub>{copyright_version}</sub></i>'],
         'mode': 'text',
-        'textposition': 'bottom center',
+        'textposition': 'bottom left',
         'showlegend': False,
         'cliponaxis': False,        
         'hoverinfo': 'skip',
@@ -737,16 +790,22 @@ def update_heatmap():
 
     if not ((mouseX == None) or (mouseY == None)):
         T_atCursor = T[int(mouseY),int(mouseX)] 
+        xPos = [int(np.clip(mouseX, nx*0.06, nx*0.94))]
+        yPos = [int(np.clip(mouseY, 1, ny -3))]
     else:
         T_atCursor = None
+        xPos = [int((xlim_min + xlim_max) / 2)]
+        yPos = [ny-4]
     
     trace6 = {
         'type': 'scatter',
-        'x': [int((xlim_min + xlim_max) / 2)],
-        'y': [ny-2],  # Adjust for the correct placement
+        #'x': ,
+        #'y': ,  # Adjust for the correct placement
+        'x': xPos,
+        'y': yPos,  # Adjust for the correct placement
         'text':  [f"{(T_atCursor+T_show_offset):.2f} °C" if T_atCursor is not None else ''],
         'mode': 'text',
-        'textposition': 'bottom center',
+        'textposition': 'top center',
         'showlegend': False,
         'cliponaxis': False,        
         'hoverinfo': 'skip'
@@ -754,10 +813,10 @@ def update_heatmap():
 
     
     if show_labels:
-        dat = [heatmap_trace] + (streamline_plotly if current_direction >= 0 else streamline_plotly2) + [contour_trace, contour_iso_trace, contour_valve1_trace, contour_valve2_trace, trace1, trace2, trace3, trace4, trace5, trace6]
+        dat = [heatmap_trace] + (streamline_plotly if current_direction >= 0 else streamline_plotly2) + [contour_piston, contour_trace, contour_iso_trace, contour_valve1_trace, contour_valve2_trace, trace1, trace2, trace3, trace4, trace5, trace6]
     #    dat = [heatmap_trace] +  [contour_trace, trace1, trace2, trace3, trace4, trace5, trace6]
     else:
-        dat = [heatmap_trace] + (streamline_plotly if current_direction >= 0 else streamline_plotly2) + [contour_trace, contour_iso_trace, contour_valve1_trace, contour_valve2_trace, trace5]
+        dat = [heatmap_trace] + (streamline_plotly if current_direction >= 0 else streamline_plotly2) + [contour_piston, contour_trace, contour_iso_trace, contour_valve1_trace, contour_valve2_trace, trace5]
 
         
     Plotly.react(
@@ -943,32 +1002,43 @@ def update_frame_noProfile():
     clk_heat, clk_flow = get_automatic_clocks()
 
     if isSliders:
-        fluid_position_slider = float(document.getElementById("param-fluid_position").value)
+        fluid_position_slider_measured = float(document.getElementById("param-fluid_position").value)
         #efield_slider =  bool(float(document.getElementById("param-e_field").value) <= 0.5)
         # 1 - x weil der slider "von oben nach unten" ist...
         efield_soll = 1.0 - float(document.getElementById("param-e_field").value) # ist zw. 0 <= x <= 1
     if isRemoteControlled:
         # Hier die Werte von der RT Box abfragen (Pascal)
-        fluid_position_slider = -1 # Wertebereich -1 bis 1
+        fluid_position_slider_measured = -1 # Wertebereich -1 bis 1
         efield_soll = 1 # Wertebereich 0 bis 1 (wird bisher auf 0/1 geklippt und kann zukünftig auch noch in feineren Schritten implementiert werden)
 
     # Flow direction (automatic mode)
     if clk_flow == 1:
         u_mod, v_mod = u, v
         current_direction = 1
+
+        fluid_position_ist += 0.1
+
+        if fluid_position_ist > 0.2:     # hack to visually solve dt ≠ 1/fps issue....
+            fluid_position_ist -= ((fluid_position_ist-0.2)**2)*0.02 # quadratic damping
+
     elif clk_flow == 0:
         #u_mod, v_mod = -u, -v
         u_mod, v_mod = u2, v2
         current_direction = -1
+
+        fluid_position_ist -= 0.1
+
+        if fluid_position_ist < -0.2:   # hack to visually solve dt ≠ 1/fps issue....
+            fluid_position_ist +=  ((fluid_position_ist+0.2)**2)*0.02 # quadratic damping
     else:
         if isSliders:
             # remote mode overriden by sliders  
     
-            if fluid_position_slider > fluid_position_ist + 0.05: # more right
+            if fluid_position_slider_measured > fluid_position_ist + 0.05: # more right
                 fluid_position_ist += 0.1
                 u_mod, v_mod = u, v
                 current_direction = 1
-            elif  fluid_position_slider < fluid_position_ist - 0.05: #more left
+            elif  fluid_position_slider_measured < fluid_position_ist - 0.05: #more left
                 fluid_position_ist -= 0.1
                 #u_mod, v_mod = -u, -v
                 u_mod, v_mod = u2, v2
