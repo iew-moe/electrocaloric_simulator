@@ -1,4 +1,4 @@
-copyright_version = "© Stefan Mönch, v1.6b, CC BY-NC 4.0"
+copyright_version = "© Stefan Mönch, v1.6c, CC BY-NC 4.0"
 
 import numpy as np
 import matplotlib
@@ -10,6 +10,7 @@ import base64
 from js import document, console, window, Plotly, Blob, URL
 from pyodide.ffi import create_proxy, to_js
 from scipy.ndimage import binary_dilation
+from scipy.ndimage import zoom
 import cProfile
 import pstats
 import time
@@ -156,14 +157,14 @@ def solve_flow(u_in, v_in, p_in, skipSolve, flowDir):
     #ax_tmp.invert_yaxis()
 
     if flowDir == 1:
-        #start_points = np.array([[3, y] for y in range(5, ny-5, 2)]) #ok
-        start_points = [[3,ny//2]]
+        start_points = np.array([[3, y] for y in range(5, ny-5, 4)]) #ok
+        #start_points = [[3,ny//2]]
         u_vals = np.array([abs(u_in[y, 3]) for _, y in start_points])
 #         start_points = np.array([[piston_end, y] for y in range((ny//2)-3+7+3, ny-3, 1)])
 #         #start_points = np.array([[x_inlet_idx, y] for y in range(0, ny//2, 2)])         # override
     else:
-        start_points = np.array([[nx-4, y] for y in range(5, ny-4, 2)]) #ok
-        start_points = [[nx-4,ny//2-1]]
+        start_points = np.array([[nx-4, y] for y in range(5, ny-4, 4)]) #ok
+        #start_points = [[nx-4,ny//2-1]]
         u_vals = np.array([abs(u_in[y, nx-4]) for _, y in start_points])
 #         start_points = np.array([[piston_start, y] for y in range(3, (ny//2)+3-7-2, 1)])
 #         #start_points = np.array([[x_outlet_idx, y] for y in range(ny//2, ny-1, 2)])         # override
@@ -635,6 +636,54 @@ def update_heatmap():
         'hoverinfo': 'skip'
     }
 
+    contour_hhx_mask_to_plot = (((hhx_mask[:, xlim_min:xlim_max]) > 0)).astype(float)
+    contour_hhx_mask_trace = {
+        #'z': obstacle[:, xlim_min:xlim_max].tolist(),
+        'z': contour_hhx_mask_to_plot.tolist(),
+        'x': x_vals,
+        'y': y_vals,
+        'type': 'contour',
+        'colorscale': [[0, 'rgba(0,0,0,0)'], [1, 'red']],  # Transparent → black
+        'contours': {
+            'start': 0.5,
+            'end': 0.5,
+            'size': 0.5,
+            'coloring': 'lines'
+        },
+        'line': {
+            'width': 0.5,
+            'color': 'white'
+        },
+        'reversescale': True,
+        'showscale': False,
+        'hoverinfo': 'skip'
+    }
+    
+    contour_chx_mask_to_plot = (((chx_mask[:, xlim_min:xlim_max]) > 0)).astype(float)
+    contour_chx_mask_trace = {
+        #'z': obstacle[:, xlim_min:xlim_max].tolist(),
+        'z': contour_chx_mask_to_plot.tolist(),
+        'x': x_vals,
+        'y': y_vals,
+        'type': 'contour',
+        'colorscale': [[0, 'rgba(0,0,0,0)'], [1, 'blue']],  # Transparent → black
+        'contours': {
+            'start': 0.5,
+            'end': 0.5,
+            'size': 0.5,
+            'coloring': 'lines'
+        },
+        'line': {
+            'width': 0.5,
+            'color': 'white'
+        },
+        'reversescale': True,
+        'showscale': False,
+        'hoverinfo': 'skip'
+    }
+        
+
+
     # Piston line (*10 weil fluid_position in 0.1er Schritten variiert wird...)
     # Achtung: dt wird nicht korrekt berücksichtigt. dt = const, clk = const, aber fps is nicht konstant!
     contour_piston = {
@@ -757,11 +806,11 @@ def update_heatmap():
     trace3 = {
         'type': 'scatter',
         #'x': [xlim_min + 22],  # Adjust for the correct placement
-        'x': [(piston_end + x_valve1)//2],  # Adjust for the correct placement
+        'x': [(piston_end + x_valve1)//2-1],  # Adjust for the correct placement
         'y': [int(3 * ny / 4)],
-        'text': ["<b>cool-side<br><i>T</i><sub>C</sub></b>"],
+        'text': ["<b>cooling<br>side<br><i>T</i><sub>C</sub></b>"],
         'mode': 'text',
-        'textposition': 'middle center',
+        'textposition': 'middle left',
         #'textangle': 90,  # Rotate text by 90 degrees
         'hoverinfo': 'skip',
         'showlegend': False,
@@ -771,11 +820,11 @@ def update_heatmap():
     trace4 = {
         'type': 'scatter',
         #'x': [xlim_max - 22],  # Adjust for the correct placement
-        'x': [(x_valve2+piston_start)//2],
+        'x': [(x_valve2+piston_start)//2+2],
         'y': [int(3* ny / 4)],
-        'text': ["<b>hot-side<br><i>T</i><sub>H</sub></b>"],
+        'text': ["<b>hot<br>side<br><i>T</i><sub>H</sub></b>"],
         'mode': 'text',
-        'textposition': 'middle center',
+        'textposition': 'middle right',
         #'textangle': 90,  # Rotate text by 90 degrees
         'hoverinfo': 'skip',
         'showlegend': False,
@@ -824,10 +873,10 @@ def update_heatmap():
 
     
     if show_labels:
-        dat = [heatmap_trace] + (streamline_plotly if current_direction >= 0 else streamline_plotly2) + [contour_piston, contour_trace, contour_iso_trace, contour_valve1_trace, contour_valve2_trace, trace1, trace2, trace3, trace4, trace5, trace6]
+        dat = [heatmap_trace] + (streamline_plotly if current_direction >= 0 else streamline_plotly2) + [contour_piston, contour_trace, contour_chx_mask_trace, contour_hhx_mask_trace, contour_iso_trace, contour_valve1_trace, contour_valve2_trace, trace1, trace2, trace3, trace4, trace5, trace6]
     #    dat = [heatmap_trace] +  [contour_trace, trace1, trace2, trace3, trace4, trace5, trace6]
     else:
-        dat = [heatmap_trace] + (streamline_plotly if current_direction >= 0 else streamline_plotly2) + [contour_piston, contour_trace, contour_iso_trace, contour_valve1_trace, contour_valve2_trace, trace5]
+        dat = [heatmap_trace] + (streamline_plotly if current_direction >= 0 else streamline_plotly2) + [contour_piston, contour_trace, contour_chx_mask_trace, contour_hhx_mask_trace, contour_iso_trace, contour_valve1_trace, contour_valve2_trace, trace5]
 
         
     Plotly.react(
@@ -1015,7 +1064,7 @@ def update_frame():
         update_frame_noProfile()
 
 def update_frame_noProfile():
-    global T, u, v, p, u2, v2, p2, cf, step_counter, space_previous, first_space_press, stream, fluid_position_ist, isRemoteControlled, efield_soll, efield_ist, last_frame_time, valve_mask, current_direction
+    global T, u, v, p, u2, v2, p2, cf, step_counter, space_previous, first_space_press, stream, fluid_position_ist, isRemoteControlled, efield_soll, efield_ist, last_frame_time, valve_mask, current_direction, hhx_mask, chx_mask
 
     clk_heat, clk_flow = get_automatic_clocks()
 
@@ -1141,6 +1190,31 @@ def update_frame_noProfile():
         else:
             if use_convection:
                 T_new = semi_lagrangian_advection(T_new, u_mod, v_mod, dt)
+
+            #HHX heat flow
+            # Calculate the heat flow for each HHX cell (set Thhx to +1K over reference)
+            R_th_hhx = 5.0 # 2 is too low (instable oscillations)
+            T_hhx = 0.0
+            Q_hhx = (T[hhx_mask] - T_hhx) / R_th_hhx 
+            # Calculate temperature change for each HHX cell  
+            dT_hhx = -Q_hhx * dt / (rho * c_p_fluid * dx * dy)   
+
+
+            #CHX heat flow
+            # Calculate the heat flow for each CHX cell (set Tchx to +1K over reference)
+            R_th_chx = R_th_hhx * 20.0 # 20-times worse than HHX
+            T_chx = 0.0
+            Q_chx = (T[chx_mask] - T_chx) / R_th_chx 
+            # Calculate temperature change for each HHX cell  
+            dT_chx = -Q_chx * dt / (rho * c_p_fluid * dx * dy)   
+            # Update fluid temperature in HHX region
+
+            # Update fluid temperature in HHX/CHX region
+            T_new[hhx_mask] += dT_hhx
+            T_new[chx_mask] += dT_chx
+
+            console.log(f"Q_hhx_mean: {Q_hhx.mean():.4f}, Q_chx_mean: {Q_chx.mean():.4f}  ")
+
             count_conv += 1
 
           #zero-gradient (Neumann) BCs:
@@ -1283,7 +1357,7 @@ def init_simulation(config=default_config):
     global isSliders, fluid_position_ist, isRemoteControlled, efield_ist, efield_soll
     global last_frame_time
     global piston_mask, piston_start, piston_end
-    global iso_mask
+    global iso_mask, hhx_mask, chx_mask
     global valve_mask, x_valve1, x_valve2
     global u2,v2,p2 # for left low (if valves are used, to calculate two velocity fields)
     global current_direction
@@ -1438,6 +1512,84 @@ def init_simulation(config=default_config):
     #iso_mask[y_half+3+5:, piston_end-1:piston_end+1] = 1
     #iso_mask[:y_half-3-5, piston_start-1:piston_start+1] = 1
     iso_mask[y_half+3-7:, piston_start-1:piston_start+1] = 1
+
+    # Hot side heat exchanger (HHX) mask (covers 25% to 75% in y-direction between valve and piston, and in x-direction 25%-75% of upper valve)
+    hhx_mask = np.zeros((ny, nx), dtype=bool)
+    #hhx_mask[ny*9//16:ny*15//16, (x_valve2+1) + ((piston_start-1)-(x_valve2+1))*1//4 : (x_valve2+1) + ((piston_start-1)-(x_valve2+1))*3//4] = 1
+    # Calculate HHX bounding box
+    hhx_y_start = ny * 10 // 16
+    hhx_y_end   = ny * 16 // 16
+    x_span = (piston_start - 1) - (x_valve2 + 1) 
+    #x_span = ((x_span + 6) // 7) * 7  # next integer multiple of 7 greater than or equal to x_span 
+    hhx_x_start = (x_valve2 + 1) + x_span * 1//4
+    hhx_x_end   = (x_valve2 + 1) + x_span * 3//4
+    y_span = hhx_y_end - hhx_y_start
+
+    hhx_mask = np.zeros((ny, nx), dtype=bool)
+    # # Create HHX mask (rectangle)
+    # #hhx_mask[hhx_y_start:hhx_y_end, hhx_x_start:hhx_x_end] = True
+    # # Divide x-span into 7 equal segments and fill 1st, 3rd, 5th, 7th
+    # segment_width = (hhx_x_end - hhx_x_start) // 7
+    # for i in range(1-1, 8-1, 2):  # 0-based indices for 1st, 3rd, 5th, 7th
+    #     start = hhx_x_start + i * segment_width
+    #     end = start + segment_width
+    #     hhx_mask[hhx_y_start:hhx_y_end, start:end] = True
+    # for i in range(2-1, 7-1, 4):  # lower connections
+    #     start = hhx_x_start + i * segment_width
+    #     end = start + segment_width
+    #     hhx_mask[hhx_y_start:(hhx_y_start + y_span//7), start:end] = True
+    # #for i in range(3, 4, 1):  # upper connection
+    # i = 3
+    # start = hhx_x_start + i * segment_width
+    # end = start + segment_width  
+    # hhx_mask[hhx_y_end - y_span//7:(hhx_x_end), start:end] = True
+
+    # Original 7x7 binary pattern
+    # hhx_pattern = np.array([
+    #     [1, 0, 0, 0, 0, 0, 1],
+    #     [1, 0, 1, 1, 1, 0, 1],
+    #     [1, 0, 1, 0, 1, 0, 1],
+    #     [1, 0, 1, 0, 1, 0, 1],
+    #     [1, 0, 1, 0, 1, 0, 1],
+    #     [1, 0, 1, 0, 1, 0, 1],
+    #     [1, 1, 1, 0, 1, 1, 1]
+    # ], dtype=bool)
+    hhx_pattern = np.array([
+  #      [0, 0, 0, 0, 1, 0, 1],
+        [0, 0, 0, 0, 1, 0, 1],
+        [1, 1, 1, 1, 1, 0, 1],
+        [1, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 1],        
+        [1, 1, 1, 1, 1, 0, 1],
+        [0, 0, 0, 0, 1, 0, 1],
+        [0, 0, 0, 0, 1, 0, 1],        
+        [1, 1, 1, 1, 1, 0, 1],
+        [1, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1, 1, 1]
+    ], dtype=bool)
+    # Mirror the pattern vertically (flip along Y-axis)
+    hhx_pattern = hhx_pattern[::-1]
+    
+    # Calculate HHX region dimensions
+    #hhx_height = hhx_y_end - hhx_y_start
+    #hhx_width = hhx_x_end - hhx_x_start
+    # Scale pattern to fit the HHX region using nearest-neighbor
+    #scale_y = hhx_height / 11
+    #scale_x = hhx_width / 7
+    #scaled_pattern = zoom(hhx_pattern.astype(float), (scale_y, scale_x), order=0) > 0.25
+    # Assign to hhx_mask
+    #hhx_mask[hhx_y_start:hhx_y_end, hhx_x_start:hhx_x_end] = scaled_pattern[:hhx_height, :hhx_width]
+
+    hhx_pattern = np.repeat(hhx_pattern, 2, axis=1) #  scale by integer factor in x direction
+
+    # No zoom: just place the pattern at the start position
+    hhx_mask[hhx_y_start:hhx_y_start + hhx_pattern.shape[0], hhx_x_start:hhx_x_start + hhx_pattern.shape[1]] = hhx_pattern
+
+
+    # CHX is a morrowed version
+    chx_mask = np.fliplr(hhx_mask)
+
 
     Y, X = np.mgrid[0:ny, 0:nx]
 
