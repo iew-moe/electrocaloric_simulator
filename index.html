@@ -78,13 +78,13 @@
   <div id="plot-container" style="display: flex; flex-direction: column; align-items: center; margin-top: 20px;">
     
     <!-- Heatmap -->
-    <div id="heatmap-plot" style="width: 800px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
+    <div id="heatmap-plot" style="width: 100%; max-width: 1024px; height: 280px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
     <img id="mpl-canvas" width="800" height="200" style="display: none;" />
       
     <!-- Time-domain plots -->
-    <div id="graph-plot" style="width: 800px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
-    <div id="power-plot" style="width: 800px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
-    <div id="energy-plot" style="width: 800px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
+    <div id="graph-plot" style="width: 100%; max-width: 1024px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
+    <div id="power-plot" style="width: 100%; max-width: 1024px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
+    <div id="energy-plot" style="width: 100%; max-width: 1024px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
   </div>
 
   <!-- Control Panel -->
@@ -224,7 +224,7 @@
   
 <h3>Instructions</h3>
   <!-- Instructions Section -->
-  <div id="instructions" style="margin-top: 0px; max-width: 800px; margin-left: auto; margin-right: auto; font-size: 14px; line-height: 1.5; color: #333; text-align: left;">
+  <div id="instructions" style="margin-top: 0px; max-width: 1024px; margin-left: auto; margin-right: auto; font-size: 14px; line-height: 1.5; color: #333; text-align: left;">
 
     <ul style="text-align: left; display: inline-block;">
       <li>
@@ -262,7 +262,7 @@
 
   <div>
     <h3>Details</h3>
-    <div id="details" style="margin-top: 0px; max-width: 800px; margin-left: auto; margin-right: auto; font-size: 14px; line-height: 1.5; color: #333; text-align: left;"> 
+    <div id="details" style="margin-top: 0px; max-width: 1024px; margin-left: auto; margin-right: auto; font-size: 14px; line-height: 1.5; color: #333; text-align: left;"> 
       <ul style="text-align: left; display: inline-block;">
         <li>Black contour contains active electrocaloric material</li>
         <li>White contour contains obstacles (no fluid flow, but heat flow)</li>
@@ -277,7 +277,7 @@
   
   <div>
     <h3>Troubleshooting</h3>
-    <div id="troubleshootig" style="margin-top: 0px; max-width: 800px; margin-left: auto; margin-right: auto; font-size: 14px; line-height: 1.5; color: #333; text-align: left;"> 
+    <div id="troubleshootig" style="margin-top: 0px; max-width: 1024px; margin-left: auto; margin-right: auto; font-size: 14px; line-height: 1.5; color: #333; text-align: left;"> 
       <ul style="text-align: left; display: inline-block;">
         <li>If "space" key doesn't work, click the 3D image above the simulation once with the mouse to put the focus of the keyboard to the simulator.</li>
         <li>If the space-key/scrolling issue cannot be fixed, you can also <a href="https://iew-moe.github.io/electrocaloric_simulator/" target="_blank" rel="noopener noreferrer"> run the simulation in a new tab</a></li>

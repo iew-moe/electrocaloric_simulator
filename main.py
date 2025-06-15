@@ -1,4 +1,4 @@
-copyright_version = "© Stefan Mönch, v1.6c, CC BY-NC 4.0"
+copyright_version = "© Stefan Mönch, v1.6d, CC BY-NC 4.0"
 
 import numpy as np
 import matplotlib
@@ -735,15 +735,15 @@ def update_heatmap():
 
     heatmap_layout = {
         'margin': {'l': 0, 'r': 0, 't': 0, 'b': 0},
-        'autosize': False,
-        'height': 200,
-        'width': 800,
+        'autosize': True,
+        'height': 280,
         'dragmode': False,
         'automargin': False,
 
         'xaxis': {
-            'range': [xlim_min, xlim_max],
-            'fixedrange': True,
+        #    'range': [xlim_min, xlim_max],
+            'autorange': True,
+            #'fixedrange': True,
         #    'scaleanchor': 'y',
             'constrain': 'domain',
             'showline': False, 
@@ -808,7 +808,7 @@ def update_heatmap():
         #'x': [xlim_min + 22],  # Adjust for the correct placement
         'x': [(piston_end + x_valve1)//2-1],  # Adjust for the correct placement
         'y': [int(3 * ny / 4)],
-        'text': ["<b>cooling<br>side<br><i>T</i><sub>C</sub></b>"],
+        'text': ["<b>cool<br>side<br><i>T</i><sub>C</sub></b>"],
         'mode': 'text',
         'textposition': 'middle left',
         #'textangle': 90,  # Rotate text by 90 degrees
@@ -942,6 +942,7 @@ def update_temperature_graph_noProfile():
     temp_layout = {
         'margin': {'l': 30, 'r': 10, 't': 10, 'b': 20},
         'showlegend': True,
+        'autosize': True,        
         #'font' : {'size': 1400},
         'legend': {
             'orientation': 'h',
@@ -986,6 +987,7 @@ def update_temperature_graph_noProfile():
 
     power_layout = {
         'margin': {'l': 30, 'r': 40, 't': 10, 'b': 20},
+        'autosize': True,      
         'showlegend': True,
         'legend': {
             'orientation': 'h',
@@ -1022,6 +1024,7 @@ def update_temperature_graph_noProfile():
 
     energy_layout = {
         'margin': {'l': 30, 'r': 40, 't': 10, 'b': 20},
+        'autosize': True,      
         'showlegend': True,
         'legend': {
             'orientation': 'h',
