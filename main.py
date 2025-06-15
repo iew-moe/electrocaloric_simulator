@@ -1,4 +1,4 @@
-copyright_version = "© Stefan Mönch, v1.6d, CC BY-NC 4.0"
+copyright_version = "© Stefan Mönch, v1.7, CC BY-NC 4.0"
 
 import numpy as np
 import matplotlib
@@ -420,8 +420,16 @@ def on_slider_cycle(event):
 
 def on_slider_delay(event):
     value = float(slider_delay.value)
-    console.log(f"⏳ Pump Delay: {value:.0f}%")
+    console.log(f"⏳ Pump Delay: {value*100:.0f}%")
     # Update delay logic
+
+
+def on_slider_load(event):
+    global slider_load_value
+    value = float(slider_load.value)
+    slider_load_value = value
+    console.log(f"🎚️ Load: {value*100:.0f}%")
+    # Update load (hhx and chx)
 
 def on_toggle_labels(event):
     global show_labels 
@@ -1067,7 +1075,7 @@ def update_frame():
         update_frame_noProfile()
 
 def update_frame_noProfile():
-    global T, u, v, p, u2, v2, p2, cf, step_counter, space_previous, first_space_press, stream, fluid_position_ist, isRemoteControlled, efield_soll, efield_ist, last_frame_time, valve_mask, current_direction, hhx_mask, chx_mask
+    global T, u, v, p, u2, v2, p2, cf, step_counter, space_previous, first_space_press, stream, fluid_position_ist, isRemoteControlled, efield_soll, efield_ist, last_frame_time, valve_mask, current_direction, hhx_mask, chx_mask, slider_load_value, Q_chx
 
     clk_heat, clk_flow = get_automatic_clocks()
 
@@ -1197,26 +1205,32 @@ def update_frame_noProfile():
             #HHX heat flow
             # Calculate the heat flow for each HHX cell (set Thhx to +1K over reference)
             R_th_hhx = 5.0 # 2 is too low (instable oscillations)
+            C = rho * c_p_fluid * dx * dy
+            alpha = np.exp(-dt / (R_th_hhx * C)) # exponential (RC!)
             T_hhx = 0.0
-            Q_hhx = (T[hhx_mask] - T_hhx) / R_th_hhx 
+            #Q_hhx = (T[hhx_mask] - T_hhx) / R_th_hhx  # linear
+            #Q_hhx = C * (T[hhx_mask] - T_new[hhx_mask]) / dt # exponential
             # Calculate temperature change for each HHX cell  
-            dT_hhx = -Q_hhx * dt / (rho * c_p_fluid * dx * dy)   
+            #dT_hhx = -Q_hhx * dt / (rho * c_p_fluid * dx * dy)   
+            T_new[hhx_mask] = T_hhx + (T_new[hhx_mask] - T_hhx) * alpha
 
-
-            #CHX heat flow
-            # Calculate the heat flow for each CHX cell (set Tchx to +1K over reference)
-            R_th_chx = R_th_hhx * 20.0 # 20-times worse than HHX
+            # CHX heat flow (exponential RC, like HHX)
+             # R worse than HHX
+            R_th_chx = R_th_hhx * (10 - 9 * slider_load_value)
+            C = rho * c_p_fluid * dx * dy
+            alpha_chx = np.exp(-dt / (R_th_chx * C))
             T_chx = 0.0
-            Q_chx = (T[chx_mask] - T_chx) / R_th_chx 
-            # Calculate temperature change for each HHX cell  
-            dT_chx = -Q_chx * dt / (rho * c_p_fluid * dx * dy)   
-            # Update fluid temperature in HHX region
 
-            # Update fluid temperature in HHX/CHX region
-            T_new[hhx_mask] += dT_hhx
-            T_new[chx_mask] += dT_chx
+            # Exponential heat flow (average over dt)
+            global Q_hhx, Q_chx
+            Q_hhx = (T_new[hhx_mask] - T_hhx) / R_th_hhx
+            Q_chx = (T_new[chx_mask] - T_chx) / R_th_chx
 
-            console.log(f"Q_hhx_mean: {Q_hhx.mean():.4f}, Q_chx_mean: {Q_chx.mean():.4f}  ")
+            # Exponential temperature update
+            T_new[chx_mask] = T_chx + (T_new[chx_mask] - T_chx) * alpha_chx
+
+
+            #console.log(f"Q_hhx_mean: {Q_hhx.mean():.4f}, Q_chx_mean: {Q_chx.mean():.4f}  ")
 
             count_conv += 1
 
@@ -1273,7 +1287,8 @@ def update_frame_noProfile():
 
     inlet_history.append(inlet_temp)
     outlet_history.append(outlet_temp)
-    qc_history.append(Q_total_in)
+    #qc_history.append(Q_total_in)
+    qc_history.append(-np.mean(Q_chx)*10000.0)
     qc_mean_history.append(np.mean(qc_history[-60:]))  # Mean of last 10 values
 
     # Optional: trim to last N values for performance/clarity
@@ -1357,7 +1372,7 @@ def init_simulation(config=default_config):
     global step_counter, show_labels, key_states
     global space_previous, first_space_press
     global zmin, zmax
-    global isSliders, fluid_position_ist, isRemoteControlled, efield_ist, efield_soll
+    global isSliders, fluid_position_ist, isRemoteControlled, efield_ist, efield_soll, slider_load_value, Q_hhx, Q_chx
     global last_frame_time
     global piston_mask, piston_start, piston_end
     global iso_mask, hhx_mask, chx_mask
@@ -1404,6 +1419,10 @@ def init_simulation(config=default_config):
     fig_dpi = 150
     fig_graph_dpi = 200
     fig_stream_dpi = 200
+
+    slider_load_value = 0.0
+    Q_hhx = 0.0
+    Q_chx = 0.0
 
     # Geometry
     plate_height = config["plate_height"]
@@ -1683,7 +1702,7 @@ def save_pickle_to_download(data, filename="result.pkl"):
 def register_handlers():
     global img_element, stream_img_element, graph_img_element, power_img_element
     global toggle_mode, toggle_invert, slider_cycle, slider_delay, toggle_labels, toggle_puase, toggle_isSliders
-    global slider_efield, slider_fluidposition
+    global slider_efield, slider_fluidposition, slider_load
 
     img_element = document.getElementById("mpl-canvas")
     stream_img_element = document.getElementById("heatmap-plot")
@@ -1694,6 +1713,7 @@ def register_handlers():
     toggle_invert = document.getElementById("toggle-invert")
     slider_cycle = document.getElementById("slider-cycle")
     slider_delay = document.getElementById("slider-delay")
+    slider_load = document.getElementById("slider-load")
     toggle_labels = document.getElementById("toggle-labels")
     toggle_puase = document.getElementById("toggle-pause")
     toggle_isSliders = document.getElementById("toggle-isSliders")
@@ -1716,6 +1736,7 @@ def register_handlers():
     toggle_invert.addEventListener("change", create_proxy(on_toggle_invert))
     slider_cycle.addEventListener("input", create_proxy(on_slider_cycle))
     slider_delay.addEventListener("input", create_proxy(on_slider_delay))
+    slider_load.addEventListener("input", create_proxy(on_slider_load))
     toggle_labels.addEventListener("change", create_proxy(on_toggle_labels))
     toggle_puase.addEventListener("change", create_proxy(on_toggle_pause))
     toggle_isSliders.addEventListener("change", create_proxy(on_toggle_isSliders))

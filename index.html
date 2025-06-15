@@ -96,8 +96,12 @@
       <span id="label-cycle">4.0</span>s</label><br />
     <label>Pump delay (%): <input id="slider-delay" type="range" min="0" max="50" step="5" value="0" />
       <span id="label-delay">0</span>%</label><br />
+    <label>Max. ΔT<sub>SPAN</sub><input id="slider-load" type="range" min="0" max="1" step="0.1" value="0" />
+      Max. Q<sub>C</sub>'</label><br />      
     <label><input type="checkbox" id="toggle-labels" /> Hide text annotation in simulation</label><br />
-    <label><input type="checkbox" id="toggle-pause" /> Pause simulation</label>
+    <label   style="display: none;" ><input type="checkbox" id="toggle-pause" /> Pause simulation</label>
+    <label><input type="checkbox" id="toggle-power-plot" checked /> Show cooling power graph</label><br>
+    <label><input type="checkbox" id="toggle-energy-plot" checked /> Show cooling energy graph</label>    
   </div>
 
   <div style="text-align:center; margin: 10px;">
@@ -215,10 +219,6 @@
   <div style="text-align:center; margin: 10px;">
     <button onclick="applyParams()">Apply parameters and restart</button>
   </div>
-  <div style="text-align:center; margin: 10px;">
-    <label><input type="checkbox" id="toggle-power-plot" checked /> Show Power Plot</label><br>
-    <label><input type="checkbox" id="toggle-energy-plot" checked /> Show Energy Plot</label>
-  </div>
 </div>
   
   
@@ -314,6 +314,7 @@
     const invertToggle = document.getElementById("toggle-invert");
     const cycleSlider = document.getElementById("slider-cycle");
     const delaySlider = document.getElementById("slider-delay");
+    const loadSlider = document.getElementById("slider-load");
     const cycleLabel = document.getElementById("label-cycle");
     const delayLabel = document.getElementById("label-delay");
     const labelsToggle = document.getElementById("toggle-labels");
@@ -321,6 +322,7 @@
     const isSlidersToggle = document.getElementById("toggle-isSliders");
 
     autoToggle.disabled = true;
+    loadSlider.disabled = true;
 
     function updateControlState() {
       const isAutomatic = autoToggle.checked;
@@ -337,6 +339,7 @@
       delayLabel.textContent = delaySlider.value;
     });
 
+
     autoToggle.addEventListener("change", updateControlState);
     updateControlState();
   </script>
@@ -347,7 +350,7 @@
     const divElement = document.getElementById("heatmap-plot");
   
     // Set the inner HTML of the div to display the loading message
-    divElement.innerHTML = "<p style='text-align:center; font-size:20px; font-family:sans-serif;'>⏳ Simulation loading, please wait... (might take 10s)</p>Space (keyboard): pressed/released = ±½ΔTad electrocaloric temperature injection/removal<br>Left/right (keyboard): fluid pumping<br><br>Your challenge: Maximize the temperature span!<br><br>Detailed instructions below...";
+    divElement.innerHTML = "<p style='text-align:center; font-size:20px; font-family:sans-serif;'>⏳ Simulation loading, please wait... (might take 10s)</p>Space (keyboard): pressed/released = ±½ ΔT<sub>AD</sub> electrocaloric temperature injection/removal<br>Left/right (keyboard): fluid pumping<br><br>Your challenge: Maximize the temperature span!<br><br>Detailed instructions below...";
   </script>
 
   <!-- Pyodide startup -->
@@ -358,6 +361,7 @@
       document.getElementById("slider-cycle").value = 3.0;
       document.getElementById("label-cycle").textContent = "3.0";
       document.getElementById("slider-delay").value = 0;
+      document.getElementById("slider-load").value = 0;
       document.getElementById("label-delay").textContent = "0";
       document.getElementById("toggle-invert").checked = false;
       document.getElementById("toggle-pause").checked = false;
@@ -415,6 +419,7 @@
 
 
       autoToggle.disabled = false;
+      loadSlider.disabled = false;
 
       setInterval(() => {
         pyodide.runPython("update_frame()");
