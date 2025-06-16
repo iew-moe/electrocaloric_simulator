@@ -1,4 +1,4 @@
-copyright_version = "© Stefan Mönch, v1.7, CC BY-NC 4.0"
+copyright_version = "© Stefan Mönch, v1.7b, CC BY-NC 4.0"
 
 import numpy as np
 import matplotlib
@@ -322,8 +322,9 @@ def is_mouse_in_heatmap(event):
 
 #=== Handlers ===
 def on_mouse_down(event): 
-    if is_mouse_in_heatmap(event):
-        modify_obstacle_at_click(*get_sim_grid_coords(event), event.buttons)
+    if isBuilderMode:
+        if is_mouse_in_heatmap(event):
+            modify_obstacle_at_click(*get_sim_grid_coords(event), event.buttons)
 
 def on_mouse_move(event):
   #  console.log(f"Mouse moved ({grid_x}, {grid_y}), skip ({not mouse_is_down or event.buttons == 0})")
@@ -338,16 +339,18 @@ def on_mouse_move(event):
     if event.buttons == 0:
         return
 
-    if is_mouse_in_heatmap(event):
-        modify_obstacle_at_click(*get_sim_grid_coords(event), event.buttons)
+    if isBuilderMode:
+        if is_mouse_in_heatmap(event):
+            modify_obstacle_at_click(*get_sim_grid_coords(event), event.buttons)
 
 
 def on_mouse_up(event):
-    if is_mouse_in_heatmap(event):
-        global mouse_is_down, u, v, p, u2, v2, p2, streamline_plotly, streamline_plotly2
-            
-        u[:], v[:], p[:], streamline_plotly = solve_flow(u, v, p, False, 1)
-        u2[:], v2[:], p2[:], streamline_plotly2 = solve_flow(u2, v2, p2, False, -1)
+    if isBuilderMode:
+        if is_mouse_in_heatmap(event):
+            global mouse_is_down, u, v, p, u2, v2, p2, streamline_plotly, streamline_plotly2
+                
+            u[:], v[:], p[:], streamline_plotly = solve_flow(u, v, p, False, 1)
+            u2[:], v2[:], p2[:], streamline_plotly2 = solve_flow(u2, v2, p2, False, -1)
 
 
 
@@ -452,6 +455,15 @@ def on_toggle_pause(event):
 def on_toggle_isSliders(event):
     global isSliders
     isSliders = event.target.checked
+
+def on_toggle_buildermode(event):
+    global isBuilderMode
+    isBuilderMode = event.target.checked
+    if isBuilderMode:
+        console.log("🔨 Builder Mode: ON")
+    else:
+        console.log("🔨 Builder Mode: OFF")
+    # Update UI or logic based on builder mode
 
 # === Semi-Lagrangian Advection ===
 def semi_lagrangian_advection(T, u, v, dt):
@@ -1369,7 +1381,7 @@ def init_simulation(config=default_config):
     global start_y, Y, X, fig, ax, cf, obstacle_contour
     global streamline_plotly, streamline_plotly2
     global inlet_history, outlet_history, qc_history, qc_mean_history, qc_integral
-    global step_counter, show_labels, key_states
+    global step_counter, show_labels, key_states, isBuilderMode
     global space_previous, first_space_press
     global zmin, zmax
     global isSliders, fluid_position_ist, isRemoteControlled, efield_ist, efield_soll, slider_load_value, Q_hhx, Q_chx
@@ -1420,6 +1432,7 @@ def init_simulation(config=default_config):
     fig_graph_dpi = 200
     fig_stream_dpi = 200
 
+    isBuilderMode = False
     slider_load_value = 0.0
     Q_hhx = 0.0
     Q_chx = 0.0
@@ -1702,7 +1715,7 @@ def save_pickle_to_download(data, filename="result.pkl"):
 def register_handlers():
     global img_element, stream_img_element, graph_img_element, power_img_element
     global toggle_mode, toggle_invert, slider_cycle, slider_delay, toggle_labels, toggle_puase, toggle_isSliders
-    global slider_efield, slider_fluidposition, slider_load
+    global slider_efield, slider_fluidposition, slider_load, toggle_buildermode
 
     img_element = document.getElementById("mpl-canvas")
     stream_img_element = document.getElementById("heatmap-plot")
@@ -1719,6 +1732,7 @@ def register_handlers():
     toggle_isSliders = document.getElementById("toggle-isSliders")
     slider_efield = document.getElementById("param-e_field")
     slider_fluidposition = document.getElementById("param-fluid_position")
+    toggle_buildermode = document.getElementById("toggle-buildermode")
 
     heatmap_div = stream_img_element
     heatmap_div.addEventListener("contextmenu", create_proxy(lambda e: e.preventDefault()))
@@ -1740,6 +1754,7 @@ def register_handlers():
     toggle_labels.addEventListener("change", create_proxy(on_toggle_labels))
     toggle_puase.addEventListener("change", create_proxy(on_toggle_pause))
     toggle_isSliders.addEventListener("change", create_proxy(on_toggle_isSliders))
+    toggle_buildermode.addEventListener("change", create_proxy(on_toggle_buildermode))
 
 
 def read_config_from_html():
