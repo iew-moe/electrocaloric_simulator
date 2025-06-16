@@ -100,11 +100,7 @@
     <label><input type="checkbox" id="toggle-power-plot" checked /> Show cooling power graph</label><br>
     <label><input type="checkbox" id="toggle-energy-plot" checked /> Show cooling energy graph</label>    
   </div>
-
-  <div style="text-align:center; margin: 10px;">
-    <label><input type="checkbox" id="toggle-remote" /> Show RT Box interface (feature only available offline)</label>
-  </div>
-
+ 
 <div id="remote-settings" style="display: none;">
 
   <fieldset style="margin: 10px auto; max-width: 600px; border: 1px solid #ccc; padding: 10px;">
@@ -143,6 +139,7 @@
    
 <!-- Advanced Settings (initially hidden) -->
 <div id="advanced-settings" style="display: none;">
+      <label><input type="checkbox" id="toggle-remote" /> Show RT Box interface (feature only available offline)</label>
   <label>Pump delay (%): <input id="slider-delay" type="range" min="0" max="50" step="5" value="0" />
       <span id="label-delay">0</span>%</label><br />
     <label><input type="checkbox" id="toggle-labels" /> Hide text annotation in simulation</label><br />
