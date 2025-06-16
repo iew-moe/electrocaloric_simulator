@@ -88,7 +88,7 @@
   </div>
 
   <!-- Control Panel -->
-  <h3>Simulation parameters</h3>
+  <!-- <h3>Simulation parameters</h3> -->
   <div id="control-panel" style="margin-top: 1px; text-align: center; font-family: sans-serif; padding: 10px;">
     <label><input type="checkbox" id="toggle-mode" /> Automatic mode</label><br />
     <label><input type="checkbox" id="toggle-invert" /> Invert phase (cooling/heating)</label><br />
@@ -347,7 +347,8 @@
     const divElement = document.getElementById("heatmap-plot");
   
     // Set the inner HTML of the div to display the loading message
-    divElement.innerHTML = "<p style='text-align:center; font-size:20px; font-family:sans-serif;'>⏳ Simulation loading, please wait... (might take 10s)</p>Space (keyboard): pressed/released = ±½ ΔT<sub>AD</sub> electrocaloric temperature injection/removal<br>Left/right (keyboard): fluid pumping<br><br>Your challenge: Maximize the temperature span!<br><br>Detailed instructions below...";
+    // divElement.innerHTML = "<p style='text-align:center; font-size:20px; font-family:sans-serif;'>⏳ Simulation loading, please wait... (might take 10s)</p>Space (keyboard): pressed/released = ±½ ΔT<sub>AD</sub> electrocaloric temperature injection/removal<br>Left/right (keyboard): fluid pumping<br><br>Your challenge: Maximize the temperature span!<br><br>Detailed instructions below...";
+    divElement.innerHTML = "<p style='text-align:center; font-size:20px; font-family:sans-serif;'>⏳ Simulation loading, please wait... (might take 10s)</p>Automatic mode starts 4s after simulation is loaded.<br>Manual mode: See instructions below...";
   </script>
 
   <!-- Pyodide startup -->
