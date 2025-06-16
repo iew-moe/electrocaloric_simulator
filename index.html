@@ -94,11 +94,8 @@
     <label><input type="checkbox" id="toggle-invert" /> Invert phase (cooling/heating)</label><br />
     <label>Cycle time (s): <input id="slider-cycle" type="range" min="1" max="8" step="0.1" value="3.0" />
       <span id="label-cycle">4.0</span>s</label><br />
-    <label>Pump delay (%): <input id="slider-delay" type="range" min="0" max="50" step="5" value="0" />
-      <span id="label-delay">0</span>%</label><br />
-    <label>Max. ΔT<sub>SPAN</sub><input id="slider-load" type="range" min="0" max="1" step="0.1" value="0" />
+        <label>Max. ΔT<sub>SPAN</sub><input id="slider-load" type="range" min="0" max="1" step="0.1" value="0" />
       Max. Q<sub>C</sub>'</label><br />      
-    <label><input type="checkbox" id="toggle-labels" /> Hide text annotation in simulation</label><br />
     <label   style="display: none;" ><input type="checkbox" id="toggle-pause" /> Pause simulation</label>
     <label><input type="checkbox" id="toggle-power-plot" checked /> Show cooling power graph</label><br>
     <label><input type="checkbox" id="toggle-energy-plot" checked /> Show cooling energy graph</label>    
@@ -146,6 +143,9 @@
    
 <!-- Advanced Settings (initially hidden) -->
 <div id="advanced-settings" style="display: none;">
+  <label>Pump delay (%): <input id="slider-delay" type="range" min="0" max="50" step="5" value="0" />
+      <span id="label-delay">0</span>%</label><br />
+    <label><input type="checkbox" id="toggle-labels" /> Hide text annotation in simulation</label><br />
   <fieldset style="margin: 10px auto; max-width: 600px; border: 1px solid #ccc; padding: 10px;">
     <legend><b>🔷 Geometry</b></legend>
     <table style="width:100%; border-spacing: 8px;">
