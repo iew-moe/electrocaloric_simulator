@@ -1401,7 +1401,7 @@ def init_simulation(config=default_config):
     global last_time, elapsed_time, is_paused
     last_time = time.time()
     elapsed_time = 0.0
-    is_paused = False
+    is_paused = True
 
     last_frame_time = time.time()
     
@@ -1436,6 +1436,9 @@ def init_simulation(config=default_config):
     slider_load_value = 0.0
     Q_hhx = 0.0
     Q_chx = 0.0
+
+
+    Y, X = np.mgrid[0:ny, 0:nx] # Represents the grid coordinates for a domain of size (ny, nx)
 
     # Geometry
     plate_height = config["plate_height"]
@@ -1552,8 +1555,10 @@ def init_simulation(config=default_config):
     hhx_mask = np.zeros((ny, nx), dtype=bool)
     #hhx_mask[ny*9//16:ny*15//16, (x_valve2+1) + ((piston_start-1)-(x_valve2+1))*1//4 : (x_valve2+1) + ((piston_start-1)-(x_valve2+1))*3//4] = 1
     # Calculate HHX bounding box
-    hhx_y_start = ny * 10 // 16
-    hhx_y_end   = ny * 16 // 16
+    #hhx_y_start = ny * 10 // 16
+    #hhx_y_end   = ny * 16 // 16
+    hhx_y_end = ny
+    hhx_y_start = ny - 12
     x_span = (piston_start - 1) - (x_valve2 + 1) 
     #x_span = ((x_span + 6) // 7) * 7  # next integer multiple of 7 greater than or equal to x_span 
     hhx_x_start = (x_valve2 + 1) + x_span * 1//4
@@ -1616,7 +1621,12 @@ def init_simulation(config=default_config):
     # Assign to hhx_mask
     #hhx_mask[hhx_y_start:hhx_y_end, hhx_x_start:hhx_x_end] = scaled_pattern[:hhx_height, :hhx_width]
 
-    hhx_pattern = np.repeat(hhx_pattern, 2, axis=1) #  scale by integer factor in x direction
+    hhx_pattern = np.repeat(hhx_pattern, 2, axis=1) #  scale by integer factor in x direction (y|x !!)
+
+    console.log(
+        f"hhx_y_start: {hhx_y_start}, hhx_y_end: {hhx_y_start + hhx_pattern.shape[0]}, "
+        f"hhx_x_start: {hhx_x_start}, hhx_x_end: {hhx_x_start + hhx_pattern.shape[1]}, "
+        f"hhx_pattern.shape: {hhx_pattern.shape}")
 
     # No zoom: just place the pattern at the start position
     hhx_mask[hhx_y_start:hhx_y_start + hhx_pattern.shape[0], hhx_x_start:hhx_x_start + hhx_pattern.shape[1]] = hhx_pattern
@@ -1625,8 +1635,6 @@ def init_simulation(config=default_config):
     # CHX is a morrowed version
     chx_mask = np.fliplr(hhx_mask)
 
-
-    Y, X = np.mgrid[0:ny, 0:nx]
 
     # Boundary conditions
     u[:, 0] = 1.0 #right flow
@@ -1686,6 +1694,10 @@ def init_simulation(config=default_config):
         data = pickle.load(file_like)
         u2, v2, p2, streamline_plotly2 = (data[k] for k in ['u2', 'v2', 'p2', 'streamlines2'])
         u, v, p, streamline_plotly = (data[k] for k in ['u', 'v', 'p', 'streamlines'])
+
+
+    is_paused = False
+
         
 #async def load_pickle_from_relative_url(filename):
 #    # Use a relative path (e.g. "solve_flow_result.pkl" or "data/solve_flow_result.pkl")
