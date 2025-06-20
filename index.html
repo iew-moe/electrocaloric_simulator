@@ -310,7 +310,7 @@
       if (event.key === " " || event.code === "Space") {
         event.preventDefault();
       }
-      if (["ArrowLeft", "ArrowRight", " ", "r", "l"].includes(event.key)) {
+      if (["ArrowLeft", "ArrowRight", " ", "r", "l","b"].includes(event.key)) {
         event.preventDefault();
       }
     }, { passive: false }); // passive: false is important for preventDefault() to work on some browsers

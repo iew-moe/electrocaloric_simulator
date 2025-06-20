@@ -1,4 +1,4 @@
-copyright_version = "© Stefan Mönch, v1.7b, CC BY-NC 4.0"
+copyright_version = "© Stefan Mönch, v1.7c, CC BY-NC 4.0"
 
 import numpy as np
 import matplotlib
@@ -345,16 +345,20 @@ def on_mouse_move(event):
 
 
 def on_mouse_up(event):
-    if isBuilderMode:
-        if is_mouse_in_heatmap(event):
-            global mouse_is_down, u, v, p, u2, v2, p2, streamline_plotly, streamline_plotly2
-                
-            u[:], v[:], p[:], streamline_plotly = solve_flow(u, v, p, False, 1)
-            u2[:], v2[:], p2[:], streamline_plotly2 = solve_flow(u2, v2, p2, False, -1)
+    return
+    #global builder_mode_left
+    #if isBuilderMode:
+    #    if is_mouse_in_heatmap(event):
+    #        global mouse_is_down, u, v, p, u2, v2, p2, streamline_plotly, streamline_plotly2
+    #            
+    #        u[:], v[:], p[:], streamline_plotly = solve_flow(u, v, p, False, 1)
+    #        u2[:], v2[:], p2[:], streamline_plotly2 = solve_flow(u2, v2, p2, False, -1)
 
 
 
 def on_key_down(event):
+
+    global mouse_is_down, u, v, p, u2, v2, p2, streamline_plotly, streamline_plotly2  
     if event.key in key_states:
         if not key_states[event.key]:
             console.log(f"🔼 {event.key} key pressed (rising edge)")
@@ -391,11 +395,27 @@ def on_key_down(event):
             "streamlines2": streamline_plotly2,            
         }
         save_pickle_to_download(data, "solve_flow_result.pkl")
+    if event.key == "b":
+        
+    #    global u, v, p, u2, v2, p2, streamline_plotly, streamline_plotly2
+        # toggle builder mode
+        global isBuilderMode
+
+        if not isBuilderMode:
+            console.log("🔨 Builder Mode: ON")
+        else:
+            console.log("🔨 Builder Mode: OFF")
+            u[:], v[:], p[:], streamline_plotly = solve_flow(u, v, p, False, 1)
+            u2[:], v2[:], p2[:], streamline_plotly2 = solve_flow(u2, v2, p2, False, -1)
+        
+        isBuilderMode = not isBuilderMode
+
 
 def on_key_up(event):
     if event.key in key_states:
         console.log(f"🔽 {event.key} key released (falling edge)")
         key_states[event.key] = False
+
 
 
 # control input from html
@@ -463,6 +483,9 @@ def on_toggle_buildermode(event):
         console.log("🔨 Builder Mode: ON")
     else:
         console.log("🔨 Builder Mode: OFF")
+        global mouse_is_down, u, v, p, u2, v2, p2, streamline_plotly, streamline_plotly2
+        u[:], v[:], p[:], streamline_plotly = solve_flow(u, v, p, False, 1)
+        u2[:], v2[:], p2[:], streamline_plotly2 = solve_flow(u2, v2, p2, False, -1)        
     # Update UI or logic based on builder mode
 
 # === Semi-Lagrangian Advection ===
@@ -868,6 +891,7 @@ def update_heatmap():
         }
     }
 
+
     if not ((mouseX == None) or (mouseY == None)):
         T_atCursor = T[int(mouseY),int(mouseX)] 
         xPos = [int(np.clip(mouseX, nx*0.06, nx*0.94))]
@@ -891,9 +915,27 @@ def update_heatmap():
         'hoverinfo': 'skip'
     }
 
+    # builder mode text
+    trace7 = {
+        'type': 'scatter',
+        'x': [int((xlim_min + xlim_max) / 2)],
+        #'y': [4],
+        'y': [ny//8],
+        #'text': ["<b>electrocaloric material</b> (<i>PVDF polymer</i> or <i>PST ceramic</i>)"],
+        'text': ["<b>BUILDER MODE ('b' to recalculate flow)</b>"],
+        #'text': ['<span style="background-color:rgba(255,255,255,0.7); padding:2px;"><b>electrocaloric material</b> (<i>PVDF polymer</i> or <i>PST ceramic</i>)</span>'],
+        'mode': 'text',
+        'textposition': 'middle center',
+        'hoverinfo': 'skip',
+        'showlegend': False,
+        'cliponaxis': False
+    }    
     
     if show_labels:
-        dat = [heatmap_trace] + (streamline_plotly if current_direction >= 0 else streamline_plotly2) + [contour_piston, contour_trace, contour_chx_mask_trace, contour_hhx_mask_trace, contour_iso_trace, contour_valve1_trace, contour_valve2_trace, trace1, trace2, trace3, trace4, trace5, trace6]
+        if not isBuilderMode:
+            dat = [heatmap_trace] + (streamline_plotly if current_direction >= 0 else streamline_plotly2) + [contour_piston, contour_trace, contour_chx_mask_trace, contour_hhx_mask_trace, contour_iso_trace, contour_valve1_trace, contour_valve2_trace, trace1, trace2, trace3, trace4, trace5, trace6]
+        else:
+            dat = [heatmap_trace] + (streamline_plotly if current_direction >= 0 else streamline_plotly2) + [contour_piston, contour_trace, contour_chx_mask_trace, contour_hhx_mask_trace, contour_iso_trace, contour_valve1_trace, contour_valve2_trace, trace1, trace2, trace3, trace4, trace5, trace6, trace7]
     #    dat = [heatmap_trace] +  [contour_trace, trace1, trace2, trace3, trace4, trace5, trace6]
     else:
         dat = [heatmap_trace] + (streamline_plotly if current_direction >= 0 else streamline_plotly2) + [contour_piston, contour_trace, contour_chx_mask_trace, contour_hhx_mask_trace, contour_iso_trace, contour_valve1_trace, contour_valve2_trace, trace5]
@@ -1671,7 +1713,7 @@ def init_simulation(config=default_config):
     step_counter = 0
     space_previous = False
     first_space_press = True
-    key_states = {"ArrowLeft": False, "ArrowRight": False, " ": False, "r": False}
+    key_states = {"ArrowLeft": False, "ArrowRight": False, " ": False, "r": False, "b": False}
     isSliders = False
     fluid_position_ist = 0.0
     isRemoteControlled = False
