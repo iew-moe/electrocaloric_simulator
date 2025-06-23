@@ -1,4 +1,4 @@
-copyright_version = "© Stefan Mönch, v1.7c, CC BY-NC 4.0"
+copyright_version = "© Stefan Mönch, v1.7d, CC BY-NC 4.0"
 
 import numpy as np
 import matplotlib
@@ -611,6 +611,22 @@ def update_heatmap():
         'hoverinfo': 'skip'
     }
 
+    if current_direction == 1:
+        piston_dash1 = 'dot'
+        piston_dash2 = 'solid'
+        piston_width1 = 0.5
+        piston_width2 = 2
+    elif current_direction == 0:
+        piston_dash1 = 'dash'
+        piston_dash2 = 'dash'
+        piston_width1 = 1
+        piston_width2 = 1
+    else:  # current_direction == -1
+        piston_dash1 = 'solid'
+        piston_dash2 = 'dot'
+        piston_width1 = 2
+        piston_width2 = 0.5
+
     contour_valve1_to_plot = ((valve_mask[:, xlim_min:xlim_max] > 0)).astype(float)
     contour_valve1_trace = {
         #'z': obstacle[:, xlim_min:xlim_max].tolist(),
@@ -626,8 +642,9 @@ def update_heatmap():
             'coloring': 'lines'
         },
         'line': {
-            'width': 2,
-            'color': 'purple'
+            'width': piston_width1,
+            'color': 'purple',
+            'dash': piston_dash1
         },
         'reversescale': True,
         'showscale': False,
@@ -648,8 +665,9 @@ def update_heatmap():
             'coloring': 'lines'
         },
         'line': {
-            'width': 2,
-            'color': 'cyan'
+            'width': piston_width2,
+            'color': 'cyan',
+            'dash': piston_dash2
         },
         'reversescale': True,
         'showscale': False,
@@ -694,7 +712,7 @@ def update_heatmap():
             'coloring': 'lines'
         },
         'line': {
-            'width': 0.5,
+            'width': 1,
             'color': 'white'
         },
         'reversescale': True,
@@ -717,7 +735,7 @@ def update_heatmap():
             'coloring': 'lines'
         },
         'line': {
-            'width': 0.5,
+            'width': 1,
             'color': 'white'
         },
         'reversescale': True,
