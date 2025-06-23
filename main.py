@@ -578,8 +578,6 @@ def get_automatic_clocks():
 
 def update_heatmap(): 
     global mouseX, mouseY, zmin, zmax
-    #T_shaded = T.copy()
-    #T_shaded[obstacle == 1] *= 0.9  # Darken solid regions
     
     # Slice to visible region
     T_visible = T[:, xlim_min:xlim_max]
@@ -828,6 +826,31 @@ def update_heatmap():
         }
     }
 
+    # # this works, but slows down visualization a lot...
+    # obstacle_visible = obstacle[:, xlim_min:xlim_max]
+    # obstacle_mask = np.where(obstacle_visible == 1, 1.0, np.nan)
+    # # add hhx and chx to mask
+    # obstacle_mask[hhx_mask[:, xlim_min:xlim_max] > 0] = 0.5 # less dark
+    # obstacle_mask[chx_mask[:, xlim_min:xlim_max] > 0] = 0.5 # less dark
+    # # add valve to mask
+    # obstacle_mask[valve_mask[:, xlim_min:xlim_max] != 0] = 0.5 # less dark  
+    # # add iso to mask
+    # obstacle_mask[iso_mask[:, xlim_min:xlim_max] != 0] = 0.5 # less dark
+
+
+    # obstacle_mask_trace = {
+    #     'z': obstacle_mask.tolist(),
+    #     'x': x_vals,
+    #     'y': y_vals,
+    #     'type': 'heatmap',
+    #     'colorscale': [[0, 'rgba(1,1,1,0)'], [1, 'rgba(1,1,1,0.19)']],  # 19% transparent white
+    #     'showscale': False,
+    #     'hoverinfo': 'skip',
+    #     'zmin': 0,
+    #     'zmax': 1
+    # }
+    
+
     if num_plates % 2 == 0:
         y_fluid_pos = ny/2-0.87
         y_material_pos = y_fluid_pos - (plate_height + plate_spacing)/2-0.87
@@ -947,7 +970,9 @@ def update_heatmap():
         'hoverinfo': 'skip',
         'showlegend': False,
         'cliponaxis': False
-    }    
+    }   
+
+ 
     
     if show_labels:
         if not isBuilderMode:
