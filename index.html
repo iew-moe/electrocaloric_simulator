@@ -85,8 +85,10 @@
     <div id="graph-plot" style="width: 100%; max-width: 1024px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
     <div id="power-plot" style="width: 100%; max-width: 1024px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
     <div id="energy-plot" style="width: 100%; max-width: 1024px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
-  </div>
-
+    <div id="pe_voltage-plot" style="width: 100%; max-width: 1024px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
+    <div id="pe_current-plot" style="width: 100%; max-width: 1024px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
+ </div>
+ 
   <!-- Control Panel -->
   <!-- <h3>Simulation parameters</h3> -->
   <div id="control-panel" style="margin-top: 1px; text-align: center; font-family: sans-serif; padding: 10px;">
@@ -96,7 +98,7 @@
       <span id="label-cycle">4.0</span>s</label><br />
         <label>Max. ΔT<sub>SPAN</sub><input id="slider-load" type="range" min="0" max="1" step="0.1" value="0" />
       Max. Q<sub>C</sub>'</label><br />      
-    <label   style="display: none;" ><input type="checkbox" id="toggle-pause" /> Pause simulation</label>
+    <label><input type="checkbox" id="toggle-pause" /> Pause simulation (to zoom into the graphs)</label><br>
     <label><input type="checkbox" id="toggle-power-plot" checked /> Show cooling power graph</label><br>
     <label><input type="checkbox" id="toggle-energy-plot" checked /> Show cooling energy graph</label>    
   </div>
@@ -271,6 +273,8 @@
     <h3>Details</h3>
     <div id="details" style="margin-top: 0px; max-width: 1024px; margin-left: auto; margin-right: auto; font-size: 14px; line-height: 1.5; color: #333; text-align: left;"> 
       <ul style="text-align: left; display: inline-block;">
+        <li><b>Thermal:</b> A double-loop electrocaloric regenerator (fluid based) is impelemented, as published by Defay's group <a href="https://www.science.org/doi/10.1126/science.adi5477" target="_blank"  rel="noopener noreferrer">[Link to publication].</a>
+        <li><b>Electrical:</b> A bidirectional dc-dc half-bridge converter with hysteretic current control and zero voltage switching is implemented, as published by Mönch's group <a href="https://ieeexplore.ieee.org/document/9762931" target="_blank" rel="noopener noreferrer">[Link to publication].</a>
         <li>Black contour contains active electrocaloric material</li>
         <li>White contour contains obstacles (no fluid flow, but heat flow)</li>
         <li>Purple contour contains check valve, allowing fluid flow only from left to right</li>
@@ -525,6 +529,57 @@ setTimeout(() => {
   document.getElementById("toggle-energy-plot").addEventListener("change", function () {
     document.getElementById("energy-plot").style.display = this.checked ? "block" : "none";
   });
+</script>
+ 
+<script>
+ function linkPEZoom() {
+    const voltageDiv = document.getElementById('pe_voltage-plot');
+    const currentDiv = document.getElementById('pe_current-plot');
+
+    let syncing = false;
+
+    function syncAxes(fromDiv, toDiv, event) {
+      if (syncing) return;
+
+      syncing = true;
+
+      const updates = {};
+
+      // Handle autoscale
+      if (event['xaxis.autorange'] === true) {
+        updates['xaxis.autorange'] = true;
+      }
+      if (event['yaxis.autorange'] === true) {
+        updates['yaxis.autorange'] = true;
+      }
+
+      // Handle zoom
+      if (event['xaxis.range[0]'] !== undefined && event['xaxis.range[1]'] !== undefined) {
+        updates['xaxis.range[0]'] = event['xaxis.range[0]'];
+        updates['xaxis.range[1]'] = event['xaxis.range[1]'];
+      }
+
+      // Apply to other plot if we have any updates
+      if (Object.keys(updates).length > 0) {
+        Plotly.relayout(toDiv, updates).then(() => syncing = false);
+      } else {
+        syncing = false;
+      }
+    }
+
+    voltageDiv.on('plotly_relayout', event => syncAxes(voltageDiv, currentDiv, event));
+    currentDiv.on('plotly_relayout', event => syncAxes(currentDiv, voltageDiv, event));
+  }
+  // Call after plots are created (delay ensures plots are ready)
+  window.addEventListener('load', () => {
+    setTimeout(linkPEZoom, 5000); // Adjust timing if necessary
+  });
+  window.addEventListener('load', () => {
+    setTimeout(linkPEZoom, 7000); // Adjust timing if necessary
+  });
+  window.addEventListener('load', () => {
+    setTimeout(linkPEZoom, 9000); // Adjust timing if necessary
+  });    
 </script>
 
 </body>

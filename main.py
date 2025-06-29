@@ -1,4 +1,4 @@
-copyright_version = "© Stefan Mönch, v1.7d, CC BY-NC 4.0"
+copyright_version = "© Stefan Mönch, v1.8, CC BY-NC 4.0"
 
 import numpy as np
 import matplotlib
@@ -363,16 +363,30 @@ def on_key_down(event):
         if not key_states[event.key]:
             console.log(f"🔼 {event.key} key pressed (rising edge)")
         key_states[event.key] = True
-    if event.key == "r":
-        global T, first_space_press, inlet_history, outlet_history, qc_history, qc_mean_history, qc_integral, fluid_position_ist, last_time, elapsed_time, zmin, zmax
+    if event.key == "r": # Reset
+        global T, first_space_press, inlet_history, outlet_history, qc_history, qc_mean_history, qc_integral, fluid_position_ist, last_time, elapsed_time, zmin, zmax, ec_avg_temp_history, pe_sim_data
         T[:, :] = 0.0
         first_space_press = True
         inlet_history = [0]
         outlet_history = [0]
+        ec_avg_temp_history = [0]
         qc_history = [0]
         qc_mean_history = [0]
         qc_integral = [0]
         fluid_position_ist = 0
+
+        pe_sim_data = {
+            't': [],
+            'i': [],
+            'v': [],
+            'vsw': [],
+            'i0': 0.0,
+            'v0': 0.0,
+            't_last': 0.0,
+            'mode': 'high'
+        }
+
+
         last_time = time.time()
         elapsed_time = 0        
         #last_time = time.time()
@@ -1152,6 +1166,204 @@ def update_temperature_graph_noProfile():
                 to_js(energy_data),
                 to_js(energy_layout))
 
+    # rolling data (viewer can get dizzy)
+    #     # --- Plot 4+5: PE Electrical Combined Plot ---
+    # # Voltage plot
+    # pe_voltage_data = [{
+    #     'x': pe_sim_data['t'],
+    #     'y': pe_sim_data['v'],
+    #     'name': 'Electrocaloric Capacitor Voltage [V]',
+    #     'line': {'color': 'blue'},
+    #     'type': 'scatter'
+    # }]
+
+    # pe_voltage_layout = {
+    #     'margin': {'l': 40, 'r': 40, 't': 10, 'b': 20},
+    #     'autosize': True,
+    #     'showlegend': True,
+    #     'legend': {
+    #         'orientation': 'h',
+    #         'yanchor': 'bottom',
+    #         'y': 1.02,
+    #         'xanchor': 'center',
+    #         'x': 0.5
+    #     },
+    #     'xaxis': {'title': 'Time [s]'},
+    #     'yaxis': {'title': 'Electrocaloric Capacitor Voltage [V]'},
+    #     'height': 200
+    # }
+
+    # Plotly.react(
+    #     document.getElementById("pe_voltage-plot"),
+    #     to_js(pe_voltage_data),
+    #     to_js(pe_voltage_layout)
+    # )
+
+    # # Current plot
+    # pe_current_data = [{
+    #     'x': pe_sim_data['t'],
+    #     'y': pe_sim_data['i'],
+    #     'name': 'Electrocaloric Capacitor Charging Current [A]',
+    #     'line': {'color': 'red'},
+    #     'type': 'scatter'
+    # }]
+
+    # pe_current_layout = {
+    #     'margin': {'l': 40, 'r': 40, 't': 10, 'b': 30},
+    #     'autosize': True,
+    #     'showlegend': True,
+    #     'legend': {
+    #         'orientation': 'h',
+    #         'yanchor': 'bottom',
+    #         'y': 1.02,
+    #         'xanchor': 'center',
+    #         'x': 0.5
+    #     },
+    #     'xaxis': {'title': 'Time [s]'},
+    #     'yaxis': {'title': 'Electrocaloric Capacitor Charging Current [A]'},
+    #     'height': 200
+    # }
+
+    # Plotly.react(
+    #     document.getElementById("pe_current-plot"),
+    #     to_js(pe_current_data),
+    #     to_js(pe_current_layout)
+    # )
+
+    #split-line approach 
+    # Parameters# Parameters
+    window = 5.5
+    gap_frac = 0  # not used any more
+    gap_duration = window * gap_frac
+    gap_start = window - gap_duration / 2
+    gap_end = gap_duration / 2
+
+    # Modulo wrapped time
+    t_wrapped = np.array(pe_sim_data['t']) % window
+    v_arr = np.array(pe_sim_data['v'])
+    i_arr = np.array(pe_sim_data['i'])
+    
+    # Mask visible data (excluding gap)
+    mask = (t_wrapped >= gap_end) | (t_wrapped < gap_start)
+    t_visible = t_wrapped[mask]
+    v_visible = v_arr[mask]
+    i_visible = i_arr[mask]
+
+    # Find index of wrap-around (minimum t_wrapped value)
+    if len(t_visible) > 0:
+        wrap_idx = np.argmin(t_visible)
+
+        # Insert NaN just before the wrap
+        t_plot = np.insert(t_visible, wrap_idx, np.nan)
+        v_plot = np.insert(v_visible, wrap_idx, np.nan)
+        i_plot = np.insert(i_visible, wrap_idx, np.nan)
+    else:
+        t_plot = t_visible
+        v_plot = v_visible
+        i_plot = i_visible
+
+    t_dummy = np.array([-0.1, -0.05, window + 0.05, window + 0.1])
+    v_dummy = np.array([0.0, np.nan, np.nan, 0.0])
+    i_dummy = np.array([0.0, np.nan, np.nan, 0.0])
+
+    t_plot = np.concatenate((t_dummy[[0,1]], t_plot, t_dummy[[2,3]]))
+    v_plot = np.concatenate((v_dummy[[0,1]], v_plot, v_dummy[[2,3]]))
+    i_plot = np.concatenate((i_dummy[[0,1]], i_plot, i_dummy[[2,3]]))
+
+    # Plot 4: PE Voltage
+    pe_voltage_data = [{
+        'x': t_plot,
+        'y': v_plot,
+        'name': 'Electrocaloric Capacitor Voltage [V]',
+        'line': {'color': 'blue'},
+        'type': 'scatter'
+    }]
+
+    pe_voltage_layout = {
+        'margin': {'l': 40, 'r': 40, 't': 10, 'b': 20}, 
+        'showlegend': True,
+        'legend': {
+            'orientation': 'h',
+            'yanchor': 'bottom',
+            'y': 1.02,
+            'xanchor': 'center',
+            'x': 0.5
+        },
+        'xaxis': {
+            'title': 'Time [s]',   
+            'range': [0, window],
+            'autorange': False, 
+            'fixedrange': True,
+            'dtick': 1
+        },
+        'yaxis': {'title': 'Electrocaloric Capacitor Voltage [V]',
+                  'autorange': True},
+        'height': 200,
+        'shapes': [{
+            'type': 'line',
+            'x0': 0,
+            'x1': 0,
+            'y0': 0,
+            'y1': 1,
+            'yref': 'paper',
+            'line': {'color': 'gray', 'width': 1, 'dash': 'dot'}
+        }]
+    }
+
+    Plotly.react(
+        document.getElementById("pe_voltage-plot"),
+        to_js(pe_voltage_data),
+        to_js(pe_voltage_layout)
+    )
+
+    # Plot 5: PE Current
+    pe_current_data = [{
+        'x': t_plot,
+        'y': i_plot,
+        'name': 'Electrocaloric Capacitor Charging Current [A]',
+        'line': {'color': 'red'},
+        'type': 'scatter'
+    }]
+
+    pe_current_layout = {
+        'margin': {'l': 40, 'r': 40, 't': 10, 'b': 30}, 
+        'showlegend': True,
+        'legend': {
+            'orientation': 'h',
+            'yanchor': 'bottom',
+            'y': 1.02,
+            'xanchor': 'center',
+            'x': 0.5
+        },
+        'xaxis': {
+            'title': 'Time [s]', 
+            'range': [0, window],
+            'autorange': False, 
+            'fixedrange': True,
+            'dtick': 1
+        },
+        'yaxis': {'title': 'Electrocaloric Capacitor Charging Current [A]',
+                  'autorange': True},
+        'height': 200,
+        'shapes': [{
+            'type': 'line',
+            'x0': 0,
+            'x1': 0,
+            'y0': 0,
+            'y1': 1,
+            'yref': 'paper',
+            'line': {'color': 'gray', 'width': 1, 'dash': 'dot'}
+        }]
+    }
+
+    Plotly.react(
+        document.getElementById("pe_current-plot"),
+        to_js(pe_current_data),
+        to_js(pe_current_layout)
+    )
+
+
+
 
 # === Update Function ===
 def update_frame():
@@ -1371,9 +1583,35 @@ def update_frame_noProfile():
     inlet_temp = np.mean(T[ny//2:, x_inlet_idx][fluid_mask[ny//2:, x_inlet_idx]])
     outlet_temp = np.mean(T[ny//2:, x_outlet_idx][fluid_mask[ny//2:, x_outlet_idx]])
 
+    #ec_avg_temp = np.mean(T[obstacle]) # todo
+    ec_avg_temp = 0
+    
     Tspan = outlet_temp - inlet_temp
     Q_conv_in, Q_diff_in = compute_heat_flow(x_inlet_idx - 2, u_mod, v_mod)
     Q_total_in = Q_conv_in + Q_diff_in
+
+
+
+    # PE simulator update
+    Vdc = 1150
+    L = 8000000e-6         # Inductance (H) increased for better visualization (!)
+    C = 180e-6          # Capacitance (F)
+ 
+    pe_t_start = pe_sim_data['t_last']
+    pe_Tseg = time.time() - last_frame_time
+    pe_v_set = efield_soll * Vdc
+    pe_ipeak, pe_ivalley = [1, -1]
+    if pe_sim_data['v0'] < efield_soll * Vdc:
+        pe_ipeak, pe_ivalley = [1,-0.1]
+    else:
+        pe_ipeak, pe_ivalley = [0.1, -1]
+    pe_results = run_hcc_segment(pe_sim_data['i0'], pe_sim_data['v0'], pe_Tseg, pe_v_set, pe_ipeak, pe_ivalley, Vdc, L, C)
+    pe_t_seg, pe_i_seg, pe_v_seg, pe_vsw_seg = pe_results
+
+    append_segment_to_sim(pe_sim_data, pe_t_seg, pe_i_seg, pe_v_seg, pe_vsw_seg, pe_t_start)
+
+
+
     current_time = time.time()
     frame_duration = current_time - last_frame_time
     fps = 1.0 / frame_duration if frame_duration > 0 else 0
@@ -1384,6 +1622,8 @@ def update_frame_noProfile():
 
     inlet_history.append(inlet_temp)
     outlet_history.append(outlet_temp)
+    ec_avg_temp_history.append(ec_avg_temp)
+
     #qc_history.append(Q_total_in)
     qc_history.append(-np.mean(Q_chx)*10000.0)
     qc_mean_history.append(np.mean(qc_history[-60:]))  # Mean of last 10 values
@@ -1395,6 +1635,7 @@ def update_frame_noProfile():
         outlet_history.pop(0)
         qc_history.pop(0)
         qc_mean_history.pop(0)
+        ec_avg_temp_history.pop(0)
         
     update_temperature_graph()
 
@@ -1451,6 +1692,140 @@ def bilinear_interpolate_numpy(T, x, y):
     return result
 
 
+### Power electronics simulator
+
+# Function to calculate time to next switch event
+def next_switch_time(i0, v0, Vsw, I_target, L, C): 
+    omega = 1 / np.sqrt(L * C)
+
+    A = i0
+    B = (Vsw - v0) / (omega * L)
+    I_amp = np.sqrt(A**2 + B**2)
+    phi = np.arctan2(A, B)
+
+    if np.abs(I_target) > I_amp:
+        return None, A, B, I_amp, phi, None  # Can't reach target
+
+    target_angle = np.arcsin(I_target / I_amp)
+    theta_options = [
+        target_angle,
+        np.pi - target_angle,
+        2 * np.pi + target_angle,
+        2 * np.pi - target_angle
+    ]
+    t_candidates = []
+    for theta in theta_options:
+        while theta - phi <= 0:
+            theta += 2 * np.pi
+        t_candidates.append((theta - phi) / omega)
+    t_pos = [tc for tc in t_candidates if tc > 1e-12]
+    t_next = min(t_pos) if t_pos else None
+    return t_next, A, B, I_amp, phi, t_candidates
+
+# Function to run a single HCC simulation step
+def run_hcc_segment(i0, v0, Tseg, v_set, I_peak, I_valley, Vin, L, C):
+    omega = 1 / np.sqrt(L * C)
+
+    t = 0.0
+    t_log = [t]
+    i_log = [i0]
+    v_log = [v0]
+    vsw_log = [(t, Vin)]
+    
+    if i0 == 0:
+        if abs(I_peak) > abs(I_valley):
+            mode = 'high'
+        else:
+            mode = 'low'
+    else:
+        if i0 < 0:
+            mode = 'high'
+        else:
+            mode = 'low'
+
+    while t < Tseg:
+        Vsw = Vin if mode == 'high' else 0
+        I_target = I_peak if mode == 'high' else I_valley
+        dt, A, B, I_amp, phi, t_candidates = next_switch_time(i0, v0, Vsw, I_target, L, C)
+
+        
+
+        
+
+        if dt is None or (
+            (abs(I_peak) > abs(I_valley) and v0 > v_set) or
+            (abs(I_peak) < abs(I_valley) and v0 < v_set)
+        ):
+            print("No further switching possible. Holding last operating point until Tsim.")
+            t_log.append(t)
+            i_log.append(0.0)
+            v_log.append(v0)
+            vsw_log.append((t, v0))
+            t_log.append(Tseg)
+            i_log.append(0.0)
+            v_log.append(v0)
+            vsw_log.append((Tseg, v0))
+            break
+
+        N_points_per_Tres = 100 # for a smooth sinus select how many points should be rendered for one Tres
+        T_res = 2 * np.pi / omega
+        N_segment = max(3, int(N_points_per_Tres * dt / T_res))
+        t_vals = np.linspace(0, dt, N_segment)
+        iL = A * np.cos(omega * t_vals) + B * np.sin(omega * t_vals)
+        vC = v0 + (A / (C * omega)) * np.sin(omega * t_vals) + (B / (C * omega)) * (1 - np.cos(omega * t_vals))
+
+        t_log.extend((t_vals[1:] + t).tolist())
+        i_log.extend(iL[1:].tolist())
+        v_log.extend(vC[1:].tolist())
+        vsw_log.append((t, Vsw))
+
+        t += dt
+        i0 = iL[-1]
+        v0 = vC[-1]
+        mode = 'low' if mode == 'high' else 'high'
+
+    return t_log, i_log, v_log, vsw_log
+
+# Function to initialize/reset simulation state
+def initialize_simulation():
+    return {
+        'i0': 0.0,              # Initial inductor current (A)
+        'v0': 0.0,              # Initial capacitor voltage (V)
+        't': 0.0,               # Initial time (s)
+        't_log': [],
+        'i_log': [],
+        'v_log': [],
+        'vsw_log': [],
+        'mode': 'high'
+    }
+
+
+def append_segment_to_sim(sim, t_seg, i_seg, v_seg, vsw_seg, t_start):
+    # Calculate absolute time
+    t_abs = [t_start + ts for ts in t_seg]
+        
+    sim['t'].extend([t_start + ts for ts in t_seg])
+    sim['i'].extend(i_seg)
+    sim['v'].extend(v_seg)
+    sim['vsw'].extend([(t_start + ts, val) for ts, val in vsw_seg])
+    sim['t_last'] = t_start + t_seg[-1]
+    sim['i0'] = i_seg[-1]
+    sim['v0'] = v_seg[-1]
+
+    max_age = 5
+    # Determine cutoff time
+    cutoff = t_abs[-1] - max_age
+
+    # Find valid indices (newer than cutoff)
+    valid_idx = next((i for i, t in enumerate(sim['t']) if t >= cutoff), len(sim['t']))
+    maxlen = len(sim['t']) - valid_idx  # Only keep the last max_age seconds
+
+    for key in ['t', 'i', 'v']:
+        sim[key] = sim[key][-maxlen:]
+
+    # For vsw, use the time value in the tuple
+    sim['vsw'] = [item for item in sim['vsw'] if item[0] >= cutoff]
+
 ### Startup/Initialisation of program
 # Default config should already be defined before this
 
@@ -1465,7 +1840,7 @@ def init_simulation(config=default_config):
     global margin, plate_height, plate_spacing, num_plates
     global start_y, Y, X, fig, ax, cf, obstacle_contour
     global streamline_plotly, streamline_plotly2
-    global inlet_history, outlet_history, qc_history, qc_mean_history, qc_integral
+    global inlet_history, outlet_history, qc_history, qc_mean_history, qc_integral, ec_avg_temp_history
     global step_counter, show_labels, key_states, isBuilderMode
     global space_previous, first_space_press
     global zmin, zmax
@@ -1477,6 +1852,18 @@ def init_simulation(config=default_config):
     global u2,v2,p2 # for left low (if valves are used, to calculate two velocity fields)
     global current_direction
     global T_show_offset
+    global pe_sim_data 
+    
+    pe_sim_data = {
+        't': [],
+        'i': [],
+        'v': [],
+        'vsw': [],
+        'i0': 0.0,
+        'v0': 0.0,
+        't_last': 0.0,
+        'mode': 'high'
+    }
 
     current_direction = 0 # for selection of which streamline_plot to show
     T_show_offset = 20.0 # just for displaying... internaly calculated starting with 0
@@ -1735,6 +2122,7 @@ def init_simulation(config=default_config):
     qc_mean_history = [0]
     qc_integral = [0]
     streamline_plotly = []
+    ec_avg_temp_history = [0]
 
     # Plot
     fig, ax = plt.subplots(figsize=fig_size, dpi=fig_dpi)
@@ -1779,6 +2167,7 @@ def init_simulation(config=default_config):
         data = pickle.load(file_like)
         u2, v2, p2, streamline_plotly2 = (data[k] for k in ['u2', 'v2', 'p2', 'streamlines2'])
         u, v, p, streamline_plotly = (data[k] for k in ['u', 'v', 'p', 'streamlines'])
+
 
 
     is_paused = False
