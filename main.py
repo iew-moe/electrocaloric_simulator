@@ -1,4 +1,4 @@
-copyright_version = "© Stefan Mönch, v1.8b, CC BY-NC 4.0"
+copyright_version = "© Stefan Mönch, v1.8c, CC BY-NC 4.0"
 
 import numpy as np
 import matplotlib
@@ -935,7 +935,7 @@ def update_heatmap():
         #'x': [int((xlim_min + xlim_max) / 2)],
         'x': [int(nx*0.95-1)],
         'y': [2],  # Adjust for the correct placement
-        'text': [f'<i><sub>{copyright_version}</sub></i>'],
+        'text': [f'{copyright_version}'],
         'mode': 'text',
         'textposition': 'bottom left',
         'showlegend': False,
@@ -1352,7 +1352,7 @@ def update_temperature_graph_noProfile():
         },
         'yaxis': {'title': 'Electrocaloric Capacitor Voltage [V]',
                   'autorange': True},
-        'height': 200,
+        'height': 160,
         'shapes': [{
             'type': 'line',
             'x0': 0,
@@ -1399,7 +1399,7 @@ def update_temperature_graph_noProfile():
         },
         'yaxis': {'title': 'Electrocaloric Capacitor Charging Current [A]',
                   'autorange': True},
-        'height': 200,
+        'height': 160,
         'shapes': [{
             'type': 'line',
             'x0': 0,
@@ -2039,12 +2039,12 @@ def init_simulation(config=default_config):
 
     fluid_mask = (obstacle == 0)
 
-    x_inlet_idx = margin - 15
-    x_outlet_idx = nx - margin + 15
+    x_inlet_idx = margin - 8
+    x_outlet_idx = nx - margin + 8
 
     # show only regenerator and inlet/outlet
-    xlim_min = x_inlet_idx - 15
-    xlim_max = x_outlet_idx + 15
+    xlim_min = x_inlet_idx - 8
+    xlim_max = x_outlet_idx + 8
 
     # show all
     xlim_min = 0
@@ -2095,9 +2095,9 @@ def init_simulation(config=default_config):
     hhx_y_start = ny - 12
     x_span = (piston_start - 1) - (x_valve2 + 1) 
     #x_span = ((x_span + 6) // 7) * 7  # next integer multiple of 7 greater than or equal to x_span 
-    hhx_x_start = (x_valve2 + 1) + x_span * 1//4
-    hhx_x_end   = (x_valve2 + 1) + x_span * 3//4
-    y_span = hhx_y_end - hhx_y_start
+    hhx_x_start = (x_valve2 + 1) + 3 # was: x_span * 1//4
+    #hhx_x_end   = (x_valve2 + 1) + x_span * 3//4
+    #y_span = hhx_y_end - hhx_y_start
 
     hhx_mask = np.zeros((ny, nx), dtype=bool)
     # # Create HHX mask (rectangle)
@@ -2155,7 +2155,7 @@ def init_simulation(config=default_config):
     # Assign to hhx_mask
     #hhx_mask[hhx_y_start:hhx_y_end, hhx_x_start:hhx_x_end] = scaled_pattern[:hhx_height, :hhx_width]
 
-    hhx_pattern = np.repeat(hhx_pattern, 2, axis=1) #  scale by integer factor in x direction (y|x !!)
+    hhx_pattern = np.repeat(hhx_pattern, 3, axis=1) #  scale by integer factor in x direction (y|x !!)
 
     console.log(
         f"hhx_y_start: {hhx_y_start}, hhx_y_end: {hhx_y_start + hhx_pattern.shape[0]}, "
