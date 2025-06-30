@@ -1281,6 +1281,7 @@ def update_temperature_graph_noProfile():
 
     pe_voltage_layout = {
         'margin': {'l': 40, 'r': 40, 't': 10, 'b': 20}, 
+        'autosize': True,        
         'showlegend': True,
         'legend': {
             'orientation': 'h',
@@ -1327,6 +1328,7 @@ def update_temperature_graph_noProfile():
 
     pe_current_layout = {
         'margin': {'l': 40, 'r': 40, 't': 10, 'b': 30}, 
+        'autosize': True,        
         'showlegend': True,
         'legend': {
             'orientation': 'h',
