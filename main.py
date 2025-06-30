@@ -1,4 +1,4 @@
-copyright_version = "© Stefan Mönch, v1.8, CC BY-NC 4.0"
+copyright_version = "© Stefan Mönch, v1.8b, CC BY-NC 4.0"
 
 import numpy as np
 import matplotlib
@@ -1165,6 +1165,59 @@ def update_temperature_graph_noProfile():
     Plotly.react(document.getElementById("energy-plot"),
                 to_js(energy_data),
                 to_js(energy_layout))
+    
+    # --- Plot: ΔT vs. Q̇c ---
+    dT_vs_Qc_data = [
+        {
+            'x': [0, 0] + qc_mean_history,
+            'y': [0, float('nan')] + [out - inn for out, inn in zip(outlet_history, inlet_history)],
+            'name': 'Temperature span Δ<i>T</i><sub>SPAN</sub> vs. Cooling power <i>Q&#775;</i><sub>C</sub>',
+            'mode': 'lines',
+            'line': {
+                'color': 'purple',
+                'width': 1.5  # Thinner line; default is 2
+            },
+            'type': 'scatter'
+        },
+        {
+            'x': [qc_mean_history[-1]],  # Wrapped in a list
+            'y': [outlet_history[-1] - inlet_history[-1]],  # Wrapped in a list
+            'mode': 'markers',
+            'marker': {'color': 'purple', 'size': 1, 'size_max': 48},  
+            'type': 'scatter',
+            'showlegend': False
+        }
+    ]
+
+
+    dT_vs_Qc_layout = {
+        'margin': {'l': 30, 'r': 40, 't': 10, 'b': 20},
+        'autosize': True,
+        'showlegend': True,
+        'legend': {
+            'orientation': 'h',
+            'yanchor': 'bottom',
+            'y': 1.02,
+            'xanchor': 'center',
+            'x': 0.5
+        },
+        'xaxis': {
+            'title': 'Average cooling power <i>Q&#775;</i><sub>C</sub> [W]',
+            'showgrid': False
+        },
+        'yaxis': {
+            'title': 'Δ<i>T</i> [K]',
+            'side': 'left'
+        },
+        'height': 200
+    }
+
+    Plotly.react(
+        document.getElementById("dT_vs_Qc_plot"),
+        to_js(dT_vs_Qc_data),
+        to_js(dT_vs_Qc_layout)
+    )
+
 
     # rolling data (viewer can get dizzy)
     #     # --- Plot 4+5: PE Electrical Combined Plot ---
@@ -1515,7 +1568,7 @@ def update_frame_noProfile():
 
             #HHX heat flow
             # Calculate the heat flow for each HHX cell (set Thhx to +1K over reference)
-            R_th_hhx = 5.0 # 2 is too low (instable oscillations)
+            R_th_hhx = 2.5 # 2 is too low (instable oscillations)
             C = rho * c_p_fluid * dx * dy
             alpha = np.exp(-dt / (R_th_hhx * C)) # exponential (RC!)
             T_hhx = 0.0
@@ -1527,7 +1580,8 @@ def update_frame_noProfile():
 
             # CHX heat flow (exponential RC, like HHX)
              # R worse than HHX
-            R_th_chx = R_th_hhx * (10 - 9 * slider_load_value)
+            #R_th_chx = R_th_hhx * (10 - 9 * slider_load_value)
+            R_th_chx = R_th_hhx * (50 - 49 * slider_load_value)
             C = rho * c_p_fluid * dx * dy
             alpha_chx = np.exp(-dt / (R_th_chx * C))
             T_chx = 0.0
@@ -1582,8 +1636,14 @@ def update_frame_noProfile():
    
     
     # Use fluid_mask to restrict to fluid cells
+
+    # variation 1: use inlet/outlet (at valve) temp
     inlet_temp = np.mean(T[ny//2:, x_inlet_idx][fluid_mask[ny//2:, x_inlet_idx]])
     outlet_temp = np.mean(T[ny//2:, x_outlet_idx][fluid_mask[ny//2:, x_outlet_idx]])
+
+    # variation 2: use heat exchanger temp
+    inlet_temp = np.mean(T_new[chx_mask])
+    outlet_temp = np.mean(T_new[hhx_mask])
 
     #ec_avg_temp = np.mean(T[obstacle]) # todo
     ec_avg_temp = 0

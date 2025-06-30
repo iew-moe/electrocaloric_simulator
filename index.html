@@ -87,7 +87,16 @@
     <div id="energy-plot" style="width: 100%; max-width: 1024px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
     <div id="pe_voltage-plot" style="width: 100%; max-width: 1024px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
     <div id="pe_current-plot" style="width: 100%; max-width: 1024px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);"></div>
- </div>
+    <div id="pe-extra-plots-wrapper"
+      style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0px; width: 100%; max-width: 1024px; margin-top: 0px;">
+      <div id="dT_vs_Qc_plot"
+        style="flex: 1 1 50%; min-width: 300px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);">
+      </div>
+      <div id="Ts_plot"
+        style="flex: 1 1 50%; min-width: 300px; height: 200px; box-shadow: 0 1px 0 rgba(0,0,0,0.1), 0 -1px 0 rgba(0,0,0,0.1), 1px 0 0 rgba(0,0,0,0.1), -1px 0 0 rgba(0,0,0,0.1);">
+      </div>
+      </div>
+  </div>
  
   <!-- Control Panel -->
   <!-- <h3>Simulation parameters</h3> -->
@@ -96,7 +105,7 @@
     <label><input type="checkbox" id="toggle-invert" /> Invert phase (cooling/heating)</label><br />
     <label>Cycle time (s): <input id="slider-cycle" type="range" min="1" max="8" step="0.1" value="3.0" />
       <span id="label-cycle">4.0</span>s</label><br />
-        <label>Max. ΔT<sub>SPAN</sub><input id="slider-load" type="range" min="0" max="1" step="0.1" value="0" />
+        <label>Max. ΔT<sub>SPAN</sub><input id="slider-load" type="range" min="0" max="1" step="0.025" value="0" />
       Max. Q<sub>C</sub>'</label><br />      
     <label><input type="checkbox" id="toggle-pause" /> Pause simulation (to zoom into the graphs)</label><br>
     <label><input type="checkbox" id="toggle-power-plot" checked /> Show cooling power graph</label><br>
