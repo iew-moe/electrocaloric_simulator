@@ -1,0 +1,18 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Interactive Simulation of Electrocaloric Cooling
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Stefan
+    family-names: Mönch
+    email: stefan.moench@iew.uni-stuttgart.de
+    affiliation: University of Stuttgart
+    orcid: 'https://orcid.org/0000-0002-5095-8781'
+repository-code: 'https://github.com/iew-moe/electrocaloric_simulator'
+url: 'https://github.com/iew-moe/electrocaloric_simulator'
+license: CC-BY-NC-4.0
