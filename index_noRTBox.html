@@ -484,52 +484,6 @@ setTimeout(() => {
  
 
 
-<script type="module">
-  let rtBoxPollTimer = null;
-
-  // Clamp helper
-  function clamp(value, min, max) {
-    return Math.max(min, Math.min(max, value));
-  }
-
-  async function pollHardware() {
-    try {
-      //const response = await fetch("http://localhost:5000/poll_data");
-      const response = await fetch("http://127.0.0.1:5000/poll_data");
-      const data = await response.json();
-
-      console.log(data)
-
-      // Clamp and update Electric Field (0 to 1)
-      if (data.efield_slider !== undefined) {
-        const clampedE = clamp(1-data.efield_slider, 0, 1);
-        document.getElementById("param-e_field").value = clampedE;
-      }
-
-      // Clamp and update Fluid Position (-1 to 1)
-      if (data.fluid_position_slider !== undefined) {
-        const clampedF = clamp(-((data.fluid_position_slider)*2-1), -1, 1);
-        document.getElementById("param-fluid_position").value = clampedF;
-      }
-
-    } catch (err) {
-      console.error("Polling error:", err);
-    }
-  }
-
-  // Handle checkbox to start/stop polling
-  document.getElementById("toggle-pollRTBox").addEventListener("change", (event) => {
-    if (event.target.checked) {
-      console.log("Polling started (RT Box override ON)");
-      rtBoxPollTimer = setInterval(pollHardware, 50);
-    } else {
-      console.log("Polling stopped (RT Box override OFF)");
-      clearInterval(rtBoxPollTimer);
-      rtBoxPollTimer = null;
-    }
-  });
-</script>
-
 <script>
   document.getElementById("toggle-power-plot").addEventListener("change", function () {
     document.getElementById("power-plot").style.display = this.checked ? "block" : "none";
