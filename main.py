@@ -2,13 +2,62 @@ copyright_version = "© Stefan Mönch, v1.8c, CC BY-NC 4.0"
 
 import numpy as np
 import matplotlib
-matplotlib.use("Agg")  # Use non-interactive backend suitable for Pyodide
+#matplotlib.use("Agg")  # Use non-interactive backend suitable for Pyodide
 import matplotlib.pyplot as plt
 from matplotlib.patheffects import withStroke 
 import io
 import base64
-from js import document, console, window, Plotly, Blob, URL
-from pyodide.ffi import create_proxy, to_js
+import sys
+
+
+is_pyodide = "js" in sys.modules  # True if running in Pyodide/browser
+if is_pyodide:
+    from js import document, console, window, Plotly, Blob, URL
+    from pyodide.ffi import create_proxy, to_js
+else: # Monkey-patch not used commands to do nothing and return nothing
+    import matplotlib.pyplot as plt
+    import logging
+    logging.basicConfig(level=logging.INFO)
+
+    class MockConsole:
+        @staticmethod
+        def log(message):
+            print(message)  # Redirect to terminal
+    console = MockConsole()
+
+    class MockPlotly:
+        @staticmethod
+        def react(*args, **kwargs):
+            pass  # Do nothing
+
+        @staticmethod
+        def newPlot(*args, **kwargs):
+            pass  # Do nothing
+
+        @staticmethod
+        def update(*args, **kwargs):
+            pass  # Do nothing
+
+    Plotly = MockPlotly()
+
+    class MockDocument:
+        @staticmethod
+        def getElementById(*args, **kwargs):
+            return None  # Return None for all calls
+
+        @staticmethod
+        def createElement(*args, **kwargs):
+            return None  # Return None for all calls
+
+        @staticmethod
+        def addEventListener(*args, **kwargs):
+            pass  # Do nothing
+
+    document = MockDocument()
+
+    def to_js(value):
+        return value  # Return the input value unchanged
+
 from scipy.ndimage import binary_dilation
 from scipy.ndimage import zoom
 import cProfile
@@ -562,6 +611,8 @@ def compute_heat_flow(x, u_mod, v_mod):
     return Q_conv, Q_diff
 
 def get_automatic_clocks():
+    if (not is_pyodide):
+        return None, None
     if not toggle_mode.checked:
         return None, None  # manual mode → no clocks
 
@@ -1612,25 +1663,28 @@ def update_frame_noProfile():
     #T = np.clip(T, -1.1, 1.1)
     cf.set_data(T)
 
-    # Update obstacle contour
-    global obstacle_contour
-    for coll in list(obstacle_contour.collections):
-        try:
-            coll.remove()
-        except ValueError:
-            pass
-    obstacle_contour = ax.contour(((obstacle.astype(bool) | (valve_mask != 0)).astype(float)), levels=[0.25], colors='black', linewidths=1.0)
-    #obstacle_contour = ax.contour((((valve_mask != 0)).astype(float)), levels=[0.25], colors='black', linewidths=1.0)
 
-    #buf = io.BytesIO()
-    #fig.savefig(buf, format="png", pad_inches=0)
-    #buf.seek(0)
-    #img_base64 = base64.b64encode(buf.read()).decode("utf-8")
-    #buf.close()
+    if (is_pyodide):
+        # Update obstacle contour
+        global obstacle_contour
+        for coll in list(obstacle_contour.collections):
+            try:
+                coll.remove()
+            except ValueError:
+                pass
+        obstacle_contour = ax.contour(((obstacle.astype(bool) | (valve_mask != 0)).astype(float)), levels=[0.25], colors='black', linewidths=1.0)
+        #obstacle_contour = ax.contour((((valve_mask != 0)).astype(float)), levels=[0.25], colors='black', linewidths=1.0)
 
-    #img_element.src = f"data:image/png;base64,{img_base64}"
+        #buf = io.BytesIO()
+        #fig.savefig(buf, format="png", pad_inches=0)
+        #buf.seek(0)
+        #img_base64 = base64.b64encode(buf.read()).decode("utf-8")
+        #buf.close()
 
-    update_heatmap()
+        #img_element.src = f"data:image/png;base64,{img_base64}"
+
+        update_heatmap()
+
 
     # === Inlet and Outlet Average Temperatures ===
    
@@ -2216,7 +2270,7 @@ def init_simulation(config=default_config):
     # Solve initial flow
 
     # calculate initial flow
-    if config != default_config:
+    if (config != default_config) or (not is_pyodide):
         u2[:], v2[:], p2[:], streamline_plotly2 = solve_flow(u2, v2, p2, False, -1)
         u[:], v[:], p[:], streamline_plotly = solve_flow(u, v, p, False, 1)
     # load precalculated flow from file (default for web deployment)
@@ -2342,6 +2396,6 @@ def startRemoteControl_from_html():
     return
 
 
-
-init_simulation()
-register_handlers()
+if __name__ == "__main__":
+    init_simulation()
+    register_handlers()
