@@ -9,12 +9,14 @@ import io
 import base64
 import sys
 
+ 
 
-is_pyodide = "js" in sys.modules  # True if running in Pyodide/browser
-if is_pyodide:
+try:
     from js import document, console, window, Plotly, Blob, URL
     from pyodide.ffi import create_proxy, to_js
-else: # Monkey-patch not used commands to do nothing and return nothing
+    is_pyodide = True    
+except ImportError: # Monkey-patch not used commands to do nothing and return nothing
+    is_pyodide = False
     import matplotlib.pyplot as plt
     import logging
     logging.basicConfig(level=logging.INFO)
