@@ -2395,7 +2395,7 @@ def startRemoteControl_from_html():
     isRemoteControlled = True
     return
 
-
+console.log(f"Is Pyodide?: {is_pyodide}")
 if __name__ == "__main__":
     init_simulation()
     register_handlers()
